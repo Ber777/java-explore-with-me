@@ -162,7 +162,7 @@ public class EndpointHitServiceImplTests {
         assertEquals(1, stats.size());
         assertEquals("/api/single", stats.getFirst().getUri());
         assertEquals(42L, stats.getFirst().getHits());
-        assertEquals("ewm-main-service", stats.getFirst().getApp());
+        assertEquals("ewm-service", stats.getFirst().getApp());
     }
 
     @Test

@@ -78,7 +78,7 @@ public class EndpointHitServiceTests {
         List<ViewStatsDto> stats = service.getStats(start, end, uris, false);
 
         assertEquals(2, stats.size());
-        assertEquals("ewm-main-service", stats.getFirst().getApp());
+        assertEquals("ewm-service", stats.getFirst().getApp());
         assertEquals("/api/events", stats.get(0).getUri());
         assertEquals(5L, stats.get(0).getHits());
         assertEquals("/api/users", stats.get(1).getUri());

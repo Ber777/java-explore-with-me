@@ -23,4 +23,10 @@ public class ErrorController {
 
         return new ErrorResponse(message);
     }
+
+    @ExceptionHandler
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleParameterInvalidException(InvalidException ex) {
+        return new ErrorResponse(ex.getMessage());
+    }
 }
