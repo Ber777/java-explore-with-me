@@ -40,16 +40,16 @@ public class StatsClient {
                 .build();
     }
 
-    public void EndpointHit(String app, String url, String ip) {
+    public void endpointHit(String app, String url, String ip) {
         EndpointHitDto endpointHitDto = new EndpointHitDto();
         endpointHitDto.setApp(app);
         endpointHitDto.setUri(url);
         endpointHitDto.setIp(ip);
         endpointHitDto.setTimestamp(LocalDateTime.now());
-        this.EndpointHit(endpointHitDto);
+        this.endpointHit(endpointHitDto);
     }
 
-    public void EndpointHit(EndpointHitDto endpointHitDto) throws StatsClientException {
+    public void endpointHit(EndpointHitDto endpointHitDto) throws StatsClientException {
         try {
             restClient.post()
                     .uri(HIT_ENDPOINT)
