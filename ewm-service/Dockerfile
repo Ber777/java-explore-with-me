@@ -1,6 +1,7 @@
 FROM amazoncorretto:21
 WORKDIR /app
-COPY target/ewm-service-*.jar app.jar
+#COPY target/*.jar app.jar
+COPY stats-service/target/*.jar app.jar
 EXPOSE 8080
 USER 1001
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
