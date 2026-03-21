@@ -27,12 +27,15 @@ public class StatsClient {
     private static final String HIT_ENDPOINT = "/hit";
     private static final String STATS_ENDPOINT = "/stats";
 
+    private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(3);
+    private static final Duration DEFAULT_CONNECTION_REQUEST_TIMEOUT = Duration.ofSeconds(5);
+
     public StatsClient(String serverUrl) {
         this.serverUrl = serverUrl;
 
         HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofSeconds(3));
-        factory.setConnectionRequestTimeout(Duration.ofSeconds(5));
+        factory.setConnectTimeout(DEFAULT_CONNECT_TIMEOUT);
+        factory.setConnectionRequestTimeout(DEFAULT_CONNECTION_REQUEST_TIMEOUT);
 
         restClient = RestClient.builder()
                 .requestFactory(factory)
