@@ -489,10 +489,14 @@ class EventServiceImplTests {
         List<UserRequestCount> requestCounts = List.of(
                 new UserRequestCount() {
                     @Override
-                    public Long getId() { return event.getId(); }
+                    public Long getId() {
+                        return event.getId();
+                    }
 
                     @Override
-                    public Integer getCount() { return 5; }
+                    public Integer getCount() {
+                        return 5;
+                    }
                 }
         );
 
@@ -562,7 +566,7 @@ class EventServiceImplTests {
     void shouldThrowAccessExceptionWhenNotInitiator() {
         EventUpdateDto eventUpdateDto = getEventUpdateDto();
         Event existingEvent = getEvent();
-        existingEvent.setInitiator(new User() {{ setId(2L); }}); // Другой инициатор
+        existingEvent.setInitiator(User.builder().id(2L).build()); // Другой инициатор
 
         when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(existingEvent));
         doThrow(new ValidationException("Нет доступа к событию"))
