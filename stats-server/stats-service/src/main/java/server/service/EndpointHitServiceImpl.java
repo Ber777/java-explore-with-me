@@ -1,15 +1,16 @@
 package server.service;
 
-import dto.EndpointHitDto;
 import dto.ViewStatsDto;
+import dto.EndpointHitDto;
+import server.exception.InvalidException;
 import server.repository.EndpointHitRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.*;
+import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
 import static server.mapper.EndpointHitMapper.*;
@@ -30,6 +31,9 @@ public class EndpointHitServiceImpl implements EndpointHitService {
 
     @Override
     public List<ViewStatsDto> getStats(LocalDateTime start, LocalDateTime end, List<String> uris, Boolean unique) {
+        if (start.isAfter(end))
+            throw new InvalidException("Дата начала должна быть меньше даты окончания");
+
         // Гарантируем, что uris не null
         if (uris == null) {
             uris = new ArrayList<>();

@@ -2,6 +2,7 @@ package server.service;
 
 import dto.EndpointHitDto;
 import dto.ViewStatsDto;
+import server.exception.InvalidException;
 import server.model.EndpointHit;
 import server.repository.EndpointHitRepository;
 
@@ -276,24 +277,27 @@ public class EndpointHitServiceImplTests {
     }
 
     @Test
-    void shouldGetStatsStartAfterEndShouldHandleGracefully() {
+    void shouldGetStatsStartAfterEndShouldThrowInvalidException() {
         LocalDateTime start = LocalDateTime.of(2026, 3, 17, 0, 0);
         LocalDateTime end = LocalDateTime.of(2026, 3, 16, 0, 0);
         List<String> uris = List.of("/api/test");
 
-        List<Object[]> hitsResult = new ArrayList<>();
+        InvalidException exception = assertThrows(
+                InvalidException.class,
+                () -> endpointHitService.getStats(start, end, uris, false),
+                "Метод должен выбрасывать InvalidException при start.isAfter(end)"
+        );
 
-        when(endpointHitRepository.findEndpointHitsByUrisNotUnique(any(), any(), eq(uris)))
-                .thenReturn(hitsResult);
+        // Проверяем сообщение исключения
+        assertEquals(
+                "Дата начала должна быть меньше даты окончания",
+                exception.getMessage(),
+                "Сообщение исключения должно быть корректным"
+        );
 
-        List<ViewStatsDto> stats = endpointHitService.getStats(start, end, uris, false);
-
-        assertEquals(1, stats.size(), "Должно быть 1 элемент в результате — для переданного URI");
-
-        ViewStatsDto testStats = stats.getFirst();
-        assertEquals("ewm-service", testStats.getApp(), "Приложение должно быть 'ewm-service'");
-        assertEquals("/api/test", testStats.getUri(), "URI должен быть '/api/test'");
-        assertEquals(0L, testStats.getHits(), "Количество хитов должно быть 0 для некорректного временного интервала");
+        // Проверяем, что репозиторий не был вызван (операция прервана на ранней стадии валидации)
+        verify(endpointHitRepository, never()).findEndpointHitsByUrisNotUnique(any(), any(), any());
+        verify(endpointHitRepository, never()).findEndpointsHitByUrisAndUniqueIp(any(), any(), any());
     }
 
     @Test

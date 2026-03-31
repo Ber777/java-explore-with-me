@@ -58,7 +58,8 @@ public class StatsClient {
                     .uri(HIT_ENDPOINT)
                     .contentType(APPLICATION_JSON)
                     .body(endpointHitDto)
-                    .retrieve();
+                    .retrieve()
+                    .toBodilessEntity();
         } catch (ResourceAccessException e) {
             throw new StatsClientException("Не удалось соединиться с сервисом статистики: " + e.getMessage());
         } catch (Exception e) {
