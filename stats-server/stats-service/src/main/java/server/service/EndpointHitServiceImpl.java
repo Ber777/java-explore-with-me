@@ -1,8 +1,7 @@
 package server.service;
 
-import dto.ViewStatsDto;
-import dto.EndpointHitDto;
-import server.exception.InvalidException;
+import dto.*;
+import server.exception.*;
 import server.repository.EndpointHitRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -39,26 +38,19 @@ public class EndpointHitServiceImpl implements EndpointHitService {
             uris = new ArrayList<>();
         }
 
-        List<String> targetUris;
-
-        // Если список пуст, получаем все уникальные URI из БД за период
-        if (uris.isEmpty()) {
-            targetUris = endpointHitRepository.findAllEndpointHitBetweenDates(start, end);
-        } else {
-            targetUris = uris;
-        }
-
-        // Выполняем один запрос для всех URI сразу
+        // Выполняем один запрос для всех URI (или всех доступных, если uris пуст)
         Map<String, Long> hitsMap;
+        List<Object[]> result;
         if (unique) {
-            List<Object[]> result = endpointHitRepository.findEndpointsHitByUrisAndUniqueIp(start, end, targetUris);
-            hitsMap = convertToMap(result);
+            result = endpointHitRepository.findEndpointsHitByUrisAndUniqueIpBetweenDates(start, end, uris.isEmpty() ? null : uris);
         } else {
-            List<Object[]> result = endpointHitRepository.findEndpointHitsByUrisNotUnique(start, end, targetUris);
-            hitsMap = convertToMap(result);
+            result = endpointHitRepository.findEndpointHitsByUrisNotUniqueBetweenDates(start, end, uris.isEmpty() ? null : uris);
         }
+        hitsMap = convertToMap(result);
 
-        // Формируем результат из данных карты, гарантируя наличие 0 для отсутствующих URI
+        // Если uris пуст, берём ключи из hitsMap (все URI за период)
+        List<String> targetUris = uris.isEmpty() ? new ArrayList<>(hitsMap.keySet()) : uris;
+
         List<ViewStatsDto> stats = targetUris.stream()
                 .map(uri -> toStatsDto("ewm-service", uri, hitsMap.getOrDefault(uri, 0L)))
                 .toList();

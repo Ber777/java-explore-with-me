@@ -7,22 +7,19 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.time.LocalDateTime;
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Repository
 public interface EndpointHitRepository extends JpaRepository<EndpointHit, Long> {
-
-    @Query("SELECT eh.uri FROM EndpointHit eh WHERE eh.timestamp BETWEEN :start AND :end")
-    List<String> findAllEndpointHitBetweenDates(LocalDateTime start, LocalDateTime end);
 
     // Для уникальных IP: GROUP BY uri, COUNT(DISTINCT ip)
     @Query("SELECT eh.uri, COUNT(DISTINCT eh.ip) " +
             "FROM EndpointHit eh " +
             "WHERE eh.timestamp BETWEEN :start AND :end " +
-            "AND eh.uri IN :uris " +
+            "AND (:uris IS NULL OR eh.uri IN :uris) " +
             "GROUP BY eh.uri")
-    List<Object[]> findEndpointsHitByUrisAndUniqueIp(
+    List<Object[]> findEndpointsHitByUrisAndUniqueIpBetweenDates(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,
             @Param("uris") List<String> uris);
@@ -31,9 +28,9 @@ public interface EndpointHitRepository extends JpaRepository<EndpointHit, Long> 
     @Query("SELECT eh.uri, COUNT(*) " +
             "FROM EndpointHit eh " +
             "WHERE eh.timestamp BETWEEN :start AND :end " +
-            "AND eh.uri IN :uris " +
+            "AND (:uris IS NULL OR eh.uri IN :uris) " +
             "GROUP BY eh.uri")
-    List<Object[]> findEndpointHitsByUrisNotUnique(
+    List<Object[]> findEndpointHitsByUrisNotUniqueBetweenDates(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,
             @Param("uris") List<String> uris);
