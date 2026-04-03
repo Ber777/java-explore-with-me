@@ -1,25 +1,24 @@
 package server.service;
 
-import dto.EndpointHitDto;
-import dto.ViewStatsDto;
+import dto.*;
 import server.model.EndpointHit;
 import server.repository.EndpointHitRepository;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.mockito.MockitoAnnotations;
 
-import java.time.LocalDateTime;
 import java.util.*;
+import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class EndpointHitServiceTests {
+
     @Mock
     private EndpointHitRepository repository;
 
@@ -74,7 +73,7 @@ public class EndpointHitServiceTests {
                 new Object[]{"/api/users", 3L}
         );
 
-        when(repository.findEndpointHitsByUrisNotUnique(any(), any(), eq(uris)))
+        when(repository.findEndpointHitsByUrisNotUniqueBetweenDates(any(), any(), eq(uris)))
                 .thenReturn(hitsResult);
 
         List<ViewStatsDto> stats = service.getStats(start, end, uris, false);
@@ -102,13 +101,12 @@ public class EndpointHitServiceTests {
     void shouldGetStatsUniqueHitsShouldReturnUniqueStats() {
         LocalDateTime start = LocalDateTime.of(2026, 3, 15, 0, 0);
         LocalDateTime end = LocalDateTime.of(2026, 3, 16, 0, 0);
-        List<String> uris = List.of("/api/unique");
 
-        // Возвращаем List<Object[]> для уникальных хитов
+        List<String> uris = List.of("/api/unique");
         List<Object[]> hitsResult = new ArrayList<>();
         hitsResult.add(new Object[]{"/api/unique", 2L});
 
-        when(repository.findEndpointsHitByUrisAndUniqueIp(any(), any(), eq(uris)))
+        when(repository.findEndpointsHitByUrisAndUniqueIpBetweenDates(any(), any(), eq(uris)))
                 .thenReturn(hitsResult);
 
         List<ViewStatsDto> stats = service.getStats(start, end, uris, true);
@@ -130,18 +128,14 @@ public class EndpointHitServiceTests {
         LocalDateTime start = LocalDateTime.of(2026, 3, 15, 0, 0);
         LocalDateTime end = LocalDateTime.of(2026, 3, 16, 0, 0);
 
-        List<String> allUris = Arrays.asList("/api/uri1", "/api/uri2", "/api/uri3");
-
-        when(repository.findAllEndpointHitBetweenDates(eq(start), eq(end)))
-                .thenReturn(allUris);
-
         List<Object[]> hitsResult = Arrays.asList(
                 new Object[]{"/api/uri1", 4L},
                 new Object[]{"/api/uri2", 7L},
                 new Object[]{"/api/uri3", 1L}
         );
 
-        when(repository.findEndpointHitsByUrisNotUnique(any(), any(), eq(allUris)))
+        when(repository.findEndpointHitsByUrisNotUniqueBetweenDates(
+                eq(start), eq(end), isNull()))
                 .thenReturn(hitsResult);
 
         List<ViewStatsDto> stats = service.getStats(start, end, null, false);
@@ -171,22 +165,46 @@ public class EndpointHitServiceTests {
                 "Первый элемент должен иметь больше или равное количество хитов, чем второй");
         assertTrue(stats.get(1).getHits() >= stats.get(2).getHits(),
                 "Второй элемент должен иметь больше или равное количество хитов, чем третий");
+
+        // Дополнительная проверка: убеждаемся, что метод для уникальных IP не вызывался
+        verify(repository, never())
+                .findEndpointsHitByUrisAndUniqueIpBetweenDates(any(), any(), any());
     }
 
     @Test
-    void shouldGetStatsEmptyUrisListShouldReturnEmptyStats() {
+    void shouldGetStatsEmptyUrisListShouldReturnAllAvailableStats() {
         LocalDateTime start = LocalDateTime.of(2026, 3, 15, 0, 0);
         LocalDateTime end = LocalDateTime.of(2026, 3, 16, 0, 0);
+
         List<String> emptyUris = new ArrayList<>();
 
-        // Когда список URI пуст, метод findAllEndpointHitBetweenDates возвращает пустой список
-        when(repository.findAllEndpointHitBetweenDates(any(), any()))
-                .thenReturn(emptyUris);
+        // Подготавливаем тестовые данные: два URI с количеством хитов
+        List<Object[]> mockResults = List.of(
+                new Object[]{"/events/1", 5L},
+                new Object[]{"/events/2", 3L}
+        );
+
+        // Мокаем репозиторий: при пустом списке uris передаём null, ожидаем данные по всем URI за период
+        when(repository.findEndpointHitsByUrisNotUniqueBetweenDates(any(), any(), isNull()))
+                .thenReturn(mockResults);
 
         List<ViewStatsDto> stats = service.getStats(start, end, emptyUris, false);
 
-        assertNotNull(stats);
-        assertTrue(stats.isEmpty(), "Для пустого списка URI должен возвращаться пустой результат");
+        // Проверки
+        assertNotNull(stats, "Результат не должен быть null");
+        assertEquals(2, stats.size(), "Должно вернуться 2 записи — по одному для каждого URI в БД");
+
+        ViewStatsDto first = stats.getFirst();
+        assertEquals("/events/1", first.getUri(), "Первый URI должен быть /events/1");
+        assertEquals(5L, first.getHits(), "Количество хитов для /events/1 должно быть 5");
+
+        ViewStatsDto second = stats.get(1);
+        assertEquals("/events/2", second.getUri(), "Второй URI должен быть /events/2");
+        assertEquals(3L, second.getHits(), "Количество хитов для /events/2 должно быть 3");
+
+        // Проверка сортировки: по убыванию количества хитов
+        assertTrue(first.getHits() >= second.getHits(),
+                "Результаты должны быть отсортированы по убыванию количества хитов");
     }
 
     @Test
@@ -198,7 +216,7 @@ public class EndpointHitServiceTests {
         // Для URI без данных метод возвращает пустой список Object[]
         List<Object[]> emptyResult = new ArrayList<>();
 
-        when(repository.findEndpointHitsByUrisNotUnique(any(), any(), eq(uris)))
+        when(repository.findEndpointHitsByUrisNotUniqueBetweenDates(any(), any(), eq(uris)))
                 .thenReturn(emptyResult);
 
         List<ViewStatsDto> stats = service.getStats(start, end, uris, false);
@@ -224,7 +242,7 @@ public class EndpointHitServiceTests {
                 new Object[]{"/api/low", 1L}     // 1 хит для третьего URI
         );
 
-        when(repository.findEndpointHitsByUrisNotUnique(any(), any(), eq(uris)))
+        when(repository.findEndpointHitsByUrisNotUniqueBetweenDates(any(), any(), eq(uris)))
                 .thenReturn(hitsResult);
 
         List<ViewStatsDto> stats = service.getStats(start, end, uris, false);
@@ -269,13 +287,12 @@ public class EndpointHitServiceTests {
         LocalDateTime end = LocalDateTime.of(2026, 3, 16, 0, 0);
         List<String> uris = Arrays.asList("/api/unique1", "/api/unique2");
 
-        // Возвращаем List<Object[]> для уникальных хитов с несколькими URI
         List<Object[]> hitsResult = Arrays.asList(
                 new Object[]{"/api/unique1", 3L}, // 3 уникальных IP для первого URI
                 new Object[]{"/api/unique2", 1L}  // 1 уникальный IP для второго URI
         );
 
-        when(repository.findEndpointsHitByUrisAndUniqueIp(any(), any(), eq(uris)))
+        when(repository.findEndpointsHitByUrisAndUniqueIpBetweenDates(any(), any(), eq(uris)))
                 .thenReturn(hitsResult);
 
         List<ViewStatsDto> stats = service.getStats(start, end, uris, true);
@@ -315,7 +332,7 @@ public class EndpointHitServiceTests {
         // Репозиторий возвращает пустой список — значит, нет данных для этих URI
         List<Object[]> emptyResult = new ArrayList<>();
 
-        when(repository.findEndpointHitsByUrisNotUnique(any(), any(), eq(uris)))
+        when(repository.findEndpointHitsByUrisNotUniqueBetweenDates(any(), any(), eq(uris)))
                 .thenReturn(emptyResult);
 
         List<ViewStatsDto> stats = service.getStats(start, end, uris, false);
@@ -334,7 +351,6 @@ public class EndpointHitServiceTests {
         assertEquals("/api/uri2", secondStats.getUri(), "Второй URI должен быть '/api/uri2'");
         assertEquals(0L, secondStats.getHits(), "Количество хитов должно быть 0 для URI без данных");
 
-
         // Проверка сортировки (оба имеют 0 хитов — порядок может быть любым)
         assertTrue(stats.getFirst().getHits() >= stats.get(1).getHits(),
                 "Первый элемент должен иметь больше или равное количество хитов, чем второй (оба 0)");
@@ -350,7 +366,7 @@ public class EndpointHitServiceTests {
         List<Object[]> partialResult = new ArrayList<>();
         partialResult.add(new Object[]{"/api/present", 3L});
 
-        when(repository.findEndpointHitsByUrisNotUnique(any(), any(), eq(uris)))
+        when(repository.findEndpointHitsByUrisNotUniqueBetweenDates(any(), any(), eq(uris)))
                 .thenReturn(partialResult);
 
         List<ViewStatsDto> stats = service.getStats(start, end, uris, false);
@@ -392,7 +408,7 @@ public class EndpointHitServiceTests {
         List<Object[]> uniqueResult = new ArrayList<>();
         uniqueResult.add(new Object[]{"/api/unique-present", 2L});
 
-        when(repository.findEndpointsHitByUrisAndUniqueIp(any(), any(), eq(uris)))
+        when(repository.findEndpointsHitByUrisAndUniqueIpBetweenDates(any(), any(), eq(uris)))
                 .thenReturn(uniqueResult);
 
         List<ViewStatsDto> stats = service.getStats(start, end, uris, true);

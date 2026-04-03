@@ -1,24 +1,24 @@
 package server.service;
 
-import dto.EndpointHitDto;
-import dto.ViewStatsDto;
+import dto.*;
+import server.exception.*;
 import server.model.EndpointHit;
 import server.repository.EndpointHitRepository;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.InjectMocks;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.MockitoAnnotations;
 
-import java.time.LocalDateTime;
 import java.util.*;
+import java.time.LocalDateTime;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class EndpointHitServiceImplTests {
+
     @Mock
     private EndpointHitRepository endpointHitRepository;
 
@@ -69,7 +69,7 @@ public class EndpointHitServiceImplTests {
                 new Object[]{"/api/low", 1L}
         );
 
-        when(endpointHitRepository.findEndpointHitsByUrisNotUnique(any(), any(), eq(uris)))
+        when(endpointHitRepository.findEndpointHitsByUrisNotUniqueBetweenDates(any(), any(), eq(uris)))
                 .thenReturn(hitsResult);
 
         List<ViewStatsDto> stats = endpointHitService.getStats(start, end, uris, false);
@@ -108,7 +108,7 @@ public class EndpointHitServiceImplTests {
                 new Object[]{"/api/unique2", 1L}
         );
 
-        when(endpointHitRepository.findEndpointsHitByUrisAndUniqueIp(any(), any(), eq(uris)))
+        when(endpointHitRepository.findEndpointsHitByUrisAndUniqueIpBetweenDates(any(), any(), eq(uris)))
                 .thenReturn(hitsResult);
 
         List<ViewStatsDto> stats = endpointHitService.getStats(start, end, uris, true);
@@ -134,24 +134,21 @@ public class EndpointHitServiceImplTests {
         LocalDateTime start = LocalDateTime.of(2026, 3, 15, 0, 0);
         LocalDateTime end = LocalDateTime.of(2026, 3, 16, 0, 0);
 
-        List<String> allUris = Arrays.asList("/api/uri1", "/api/uri2", "/api/uri3");
-
-        when(endpointHitRepository.findAllEndpointHitBetweenDates(eq(start), eq(end)))
-                .thenReturn(allUris);
-
         List<Object[]> hitsResult = Arrays.asList(
                 new Object[]{"/api/uri1", 4L},
                 new Object[]{"/api/uri2", 7L},
                 new Object[]{"/api/uri3", 1L}
         );
 
-        when(endpointHitRepository.findEndpointHitsByUrisNotUnique(any(), any(), eq(allUris)))
+        when(endpointHitRepository.findEndpointHitsByUrisNotUniqueBetweenDates(
+                eq(start), eq(end), isNull()))
                 .thenReturn(hitsResult);
 
         List<ViewStatsDto> stats = endpointHitService.getStats(start, end, null, false);
 
         assertEquals(3, stats.size(), "Должно быть 3 элемента в результате");
 
+        // Проверяем сортировку по убыванию хитов: /api/uri2 (7), /api/uri1 (4), /api/uri3 (1)
         assertEquals("ewm-service", stats.getFirst().getApp(), "Приложение должно быть 'ewm-service'");
         assertEquals("/api/uri2", stats.getFirst().getUri(), "Первый URI должен быть '/api/uri2' (7 хитов)");
         assertEquals(7L, stats.getFirst().getHits(), "Количество хитов для первого URI должно быть 7");
@@ -163,20 +160,22 @@ public class EndpointHitServiceImplTests {
         assertEquals("ewm-service", stats.get(2).getApp(), "Приложение должно быть 'ewm-service'");
         assertEquals("/api/uri3", stats.get(2).getUri(), "Третий URI должен быть '/api/uri3' (1 хит)");
         assertEquals(1L, stats.get(2).getHits(), "Количество хитов для третьего URI должно быть 1");
+
+        // Дополнительно проверяем, что метод для уникальных IP не вызывался
+        verify(endpointHitRepository, never())
+                .findEndpointsHitByUrisAndUniqueIpBetweenDates(any(), any(), any());
     }
 
     @Test
     void getStatsWithEmptyUrisShouldReturnEmptyList() {
         LocalDateTime start = LocalDateTime.of(2026, 3, 15, 0, 0);
         LocalDateTime end = LocalDateTime.of(2026, 3, 16, 0, 0);
+
         List<String> emptyUris = new ArrayList<>();
+        List<Object[]> hitsResult = new ArrayList<>(); // пустой результат из БД
 
-        when(endpointHitRepository.findAllEndpointHitBetweenDates(eq(start), eq(end)))
-                .thenReturn(new ArrayList<>());
-
-        List<Object[]> hitsResult = new ArrayList<>();
-
-        when(endpointHitRepository.findEndpointHitsByUrisNotUnique(any(), any(), eq(new ArrayList<>())))
+        when(endpointHitRepository.findEndpointHitsByUrisNotUniqueBetweenDates(
+                any(), any(), isNull()))
                 .thenReturn(hitsResult);
 
         List<ViewStatsDto> stats = endpointHitService.getStats(start, end, emptyUris, false);
@@ -184,17 +183,13 @@ public class EndpointHitServiceImplTests {
         assertNotNull(stats, "Результат не должен быть null");
         assertTrue(stats.isEmpty(), "Результат должен быть пустым списком, если в БД нет URI за указанный период");
 
-        // Проверяем, что был вызван метод получения URI
+        // Проверяем, что был вызван метод подсчёта хитов с null для uris
         verify(endpointHitRepository, times(1))
-                .findAllEndpointHitBetweenDates(eq(start), eq(end));
-
-        // Проверяем, что был вызван метод подсчёта хитов (даже с пустым списком URI)
-        verify(endpointHitRepository, times(1))
-                .findEndpointHitsByUrisNotUnique(any(), any(), eq(new ArrayList<>()));
+                .findEndpointHitsByUrisNotUniqueBetweenDates(any(), any(), isNull());
 
         // Убеждаемся, что метод для уникальных хитов не вызывался
         verify(endpointHitRepository, never())
-                .findEndpointsHitByUrisAndUniqueIp(any(), any(), anyList());
+                .findEndpointsHitByUrisAndUniqueIpBetweenDates(any(), any(), anyList());
     }
 
     @Test
@@ -205,7 +200,7 @@ public class EndpointHitServiceImplTests {
 
         List<Object[]> hitsResult = new ArrayList<>();
 
-        when(endpointHitRepository.findEndpointHitsByUrisNotUnique(any(), any(), eq(uris)))
+        when(endpointHitRepository.findEndpointHitsByUrisNotUniqueBetweenDates(any(), any(), eq(uris)))
                 .thenReturn(hitsResult);
 
         List<ViewStatsDto> stats = endpointHitService.getStats(start, end, uris, false);
@@ -227,7 +222,7 @@ public class EndpointHitServiceImplTests {
         List<Object[]> hitsResult = new ArrayList<>();
         hitsResult.add(new Object[]{"/api/single", 42L});
 
-        when(endpointHitRepository.findEndpointHitsByUrisNotUnique(any(), any(), eq(uris)))
+        when(endpointHitRepository.findEndpointHitsByUrisNotUniqueBetweenDates(any(), any(), eq(uris)))
                 .thenReturn(hitsResult);
 
         List<ViewStatsDto> stats = endpointHitService.getStats(start, end, uris, false);
@@ -251,7 +246,7 @@ public class EndpointHitServiceImplTests {
                 new Object[]{"/api/second", 5L}
         );
 
-        when(endpointHitRepository.findEndpointHitsByUrisNotUnique(any(), any(), eq(uris)))
+        when(endpointHitRepository.findEndpointHitsByUrisNotUniqueBetweenDates(any(), any(), eq(uris)))
                 .thenReturn(hitsResult);
 
         List<ViewStatsDto> stats = endpointHitService.getStats(start, end, uris, false);
@@ -276,24 +271,27 @@ public class EndpointHitServiceImplTests {
     }
 
     @Test
-    void shouldGetStatsStartAfterEndShouldHandleGracefully() {
+    void shouldGetStatsStartAfterEndShouldThrowInvalidException() {
         LocalDateTime start = LocalDateTime.of(2026, 3, 17, 0, 0);
         LocalDateTime end = LocalDateTime.of(2026, 3, 16, 0, 0);
         List<String> uris = List.of("/api/test");
 
-        List<Object[]> hitsResult = new ArrayList<>();
+        InvalidException exception = assertThrows(
+                InvalidException.class,
+                () -> endpointHitService.getStats(start, end, uris, false),
+                "Метод должен выбрасывать InvalidException при start.isAfter(end)"
+        );
 
-        when(endpointHitRepository.findEndpointHitsByUrisNotUnique(any(), any(), eq(uris)))
-                .thenReturn(hitsResult);
+        // Проверяем сообщение исключения
+        assertEquals(
+                "Дата начала должна быть меньше даты окончания",
+                exception.getMessage(),
+                "Сообщение исключения должно быть корректным"
+        );
 
-        List<ViewStatsDto> stats = endpointHitService.getStats(start, end, uris, false);
-
-        assertEquals(1, stats.size(), "Должно быть 1 элемент в результате — для переданного URI");
-
-        ViewStatsDto testStats = stats.getFirst();
-        assertEquals("ewm-service", testStats.getApp(), "Приложение должно быть 'ewm-service'");
-        assertEquals("/api/test", testStats.getUri(), "URI должен быть '/api/test'");
-        assertEquals(0L, testStats.getHits(), "Количество хитов должно быть 0 для некорректного временного интервала");
+        // Проверяем, что репозиторий не был вызван (операция прервана на ранней стадии валидации)
+        verify(endpointHitRepository, never()).findEndpointHitsByUrisNotUniqueBetweenDates(any(), any(), any());
+        verify(endpointHitRepository, never()).findEndpointsHitByUrisAndUniqueIpBetweenDates(any(), any(), any());
     }
 
     @Test
@@ -330,7 +328,7 @@ public class EndpointHitServiceImplTests {
         List<Object[]> partialResult = new ArrayList<>();
         partialResult.add(new Object[]{"/api/present", 3L});
 
-        when(endpointHitRepository.findEndpointHitsByUrisNotUnique(any(), any(), eq(uris)))
+        when(endpointHitRepository.findEndpointHitsByUrisNotUniqueBetweenDates(any(), any(), eq(uris)))
                 .thenReturn(partialResult);
 
         List<ViewStatsDto> stats = endpointHitService.getStats(start, end, uris, false);
@@ -365,7 +363,7 @@ public class EndpointHitServiceImplTests {
         List<String> uris = List.of("/api/test");
 
         // Симулируем случай, когда репозиторий возвращает null
-        when(endpointHitRepository.findEndpointHitsByUrisNotUnique(any(), any(), eq(uris)))
+        when(endpointHitRepository.findEndpointHitsByUrisNotUniqueBetweenDates(any(), any(), eq(uris)))
                 .thenReturn(null);
 
         List<ViewStatsDto> stats = endpointHitService.getStats(start, end, uris, false);
@@ -379,7 +377,7 @@ public class EndpointHitServiceImplTests {
         assertEquals(0L, testStats.getHits(), "Количество хитов должно быть 0 при null от репозитория");
 
         // Дополнительная проверка: убедимся, что сервис корректно обработал null и не выбросил исключение
-        verify(endpointHitRepository, times(1)).findEndpointHitsByUrisNotUnique(
+        verify(endpointHitRepository, times(1)).findEndpointHitsByUrisNotUniqueBetweenDates(
                 eq(start), eq(end), eq(uris)
         );
     }
@@ -391,7 +389,7 @@ public class EndpointHitServiceImplTests {
         List<String> uris = List.of("/api/unique-test");
 
         // Симулируем null для уникальных хитов
-        when(endpointHitRepository.findEndpointsHitByUrisAndUniqueIp(any(), any(), eq(uris)))
+        when(endpointHitRepository.findEndpointsHitByUrisAndUniqueIpBetweenDates(any(), any(), eq(uris)))
                 .thenReturn(null);
 
         List<ViewStatsDto> stats = endpointHitService.getStats(start, end, uris, true);
@@ -405,7 +403,7 @@ public class EndpointHitServiceImplTests {
         assertEquals(0L, testStats.getHits(), "Количество уникальных хитов должно быть 0 при null от репозитория");
 
         // Проверка вызова правильного метода репозитория
-        verify(endpointHitRepository, times(1)).findEndpointsHitByUrisAndUniqueIp(
+        verify(endpointHitRepository, times(1)).findEndpointsHitByUrisAndUniqueIpBetweenDates(
                 eq(start), eq(end), eq(uris)
         );
     }
@@ -428,9 +426,9 @@ public class EndpointHitServiceImplTests {
                 new Object[]{"/api/group2", 3L}
         );
 
-        when(endpointHitRepository.findEndpointHitsByUrisNotUnique(any(), any(), eq(uris)))
+        when(endpointHitRepository.findEndpointHitsByUrisNotUniqueBetweenDates(any(), any(), eq(uris)))
                 .thenReturn(nonUniqueHits);
-        when(endpointHitRepository.findEndpointsHitByUrisAndUniqueIp(any(), any(), eq(uris)))
+        when(endpointHitRepository.findEndpointsHitByUrisAndUniqueIpBetweenDates(any(), any(), eq(uris)))
                 .thenReturn(uniqueHits);
 
         // Тест для не уникальных хитов
