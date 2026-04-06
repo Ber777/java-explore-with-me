@@ -2,6 +2,8 @@ package ewm.event.service;
 
 import ewm.event.model.*;
 
+import ewm.location.model.Zone;
+import jakarta.persistence.criteria.Expression;
 import lombok.experimental.UtilityClass;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -83,5 +85,30 @@ public class EventSpecifications {
     public static Specification<Event> withRangeEnd(LocalDateTime rangeEnd) {
         return rangeEnd == null ? null : (root, query, cb) ->
                 cb.lessThanOrEqualTo(root.get("eventDate"), rangeEnd);
+    }
+
+    public static Specification<Event> withLocationId(Long locationId) {
+        if (locationId == null)
+            return null;
+
+        return (root, query, cb) ->
+                cb.equal(root.get("location").get("id"), locationId);
+    }
+
+    public static Specification<Event> withCoordinates(Zone zone) {
+        if (zone == null)
+            return null;
+
+        return (root, query, cb) -> {
+            Expression<Double> distance = cb.function(
+                    "calc_dist",
+                    Double.class,
+                    cb.literal(zone.getLatitude()),
+                    cb.literal(zone.getLongitude()),
+                    root.get("location").get("latitude"),
+                    root.get("location").get("longitude")
+            );
+            return cb.lessThanOrEqualTo(distance, zone.getRadius());
+        };
     }
 }

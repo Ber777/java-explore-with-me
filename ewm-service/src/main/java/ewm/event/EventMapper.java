@@ -4,6 +4,7 @@ import ewm.event.dto.*;
 import ewm.user.UserMapper;
 import ewm.event.model.Event;
 import ewm.category.CategoryMapper;
+import ewm.location.LocationMapper;
 
 import lombok.experimental.UtilityClass;
 
@@ -23,9 +24,7 @@ public class EventMapper {
                 .state(event.getState())
                 .confirmedRequests(event.getConfirmedRequests())
                 .views(event.getViews())
-                .location(new LocationDto(
-                        event.getLocationLat(),
-                        event.getLocationLon()))
+                .location(LocationMapper.toLocationDto(event.getLocation()))
                 .participantLimit(event.getParticipantLimit())
                 .requestModeration(event.getRequestModeration())
                 .build();
@@ -52,8 +51,6 @@ public class EventMapper {
                 .paid(eventDto.getPaid())
                 .eventDate(eventDto.getEventDate())
                 .description(eventDto.getDescription())
-                .locationLat(eventDto.getLocation().getLat())
-                .locationLon(eventDto.getLocation().getLon())
                 .participantLimit(eventDto.getParticipantLimit())
                 .requestModeration(eventDto.getRequestModeration())
                 .build();

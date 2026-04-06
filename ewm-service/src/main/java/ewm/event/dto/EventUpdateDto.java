@@ -1,6 +1,7 @@
 package ewm.event.dto;
 
 import ewm.event.model.*;
+import ewm.location.dto.LocationDto;
 
 import lombok.*;
 import jakarta.validation.constraints.Min;
@@ -17,7 +18,6 @@ import static ewm.Constants.DATE_TIME_FORMAT;
 @Builder
 @ToString
 public class EventUpdateDto {
-
     @Size(min = 3, max = 120, message = "Заголовок должен содержать минимум 3 и максимум 120 символов")
     private String title;
 
@@ -34,8 +34,8 @@ public class EventUpdateDto {
     @JsonFormat(pattern = DATE_TIME_FORMAT)
     private LocalDateTime eventDate;
 
-    private LocationDto location;
     private Boolean paid;
+    private LocationDto location;
 
     @Min(0)
     private Integer participantLimit;

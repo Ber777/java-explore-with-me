@@ -70,6 +70,10 @@ class EventAdminControllerTests {
         List<EventState> states = List.of(EventState.PUBLISHED, EventState.PENDING);
         LocalDateTime rangeStart = LocalDateTime.now();
         LocalDateTime rangeEnd = LocalDateTime.now().plusDays(7);
+        Long locationId = 5L;
+        Double lat = 55.751244;
+        Double lon = 37.618423;
+        Double radius = 10.0;
         Integer offset = 5;
         Integer limit = 20;
 
@@ -79,7 +83,7 @@ class EventAdminControllerTests {
         when(eventService.getFullEventsBy(any())).thenReturn(events);
 
         Collection<EventDtoResponse> result = eventAdminController.getEvents(
-                users, categories, states, rangeStart, rangeEnd, offset, limit);
+                users, categories, states, rangeStart, rangeEnd, locationId, lat, lon, radius, offset, limit);
 
         assertNotNull(result);
         assertEquals(1, result.size());
@@ -94,8 +98,13 @@ class EventAdminControllerTests {
         assertEquals(states, capturedFilter.getStates());
         assertEquals(rangeStart, capturedFilter.getRangeStart());
         assertEquals(rangeEnd, capturedFilter.getRangeEnd());
+        assertEquals(locationId, capturedFilter.getLocationId());
         assertEquals(offset, capturedFilter.getFrom());
         assertEquals(limit, capturedFilter.getSize());
+        assertNotNull(capturedFilter.getZone());
+        assertEquals(lat, capturedFilter.getZone().getLatitude());
+        assertEquals(lon, capturedFilter.getZone().getLongitude());
+        assertEquals(radius, capturedFilter.getZone().getRadius());
     }
 
     @Test
@@ -105,7 +114,7 @@ class EventAdminControllerTests {
                 .thenReturn(List.of(event));
 
         Collection<EventDtoResponse> result = eventAdminController.getEvents(
-                null, null, null, null, null, 0, 10);
+                null, null, null, null, null, null, null, null, null, 0, 10);
 
         assertNotNull(result);
         assertEquals(1, result.size());
@@ -120,9 +129,12 @@ class EventAdminControllerTests {
         assertNull(capturedFilter.getStates());
         assertNull(capturedFilter.getRangeStart());
         assertNull(capturedFilter.getRangeEnd());
+        assertNull(capturedFilter.getLocationId());
+        assertNull(capturedFilter.getZone());
         assertEquals(0, capturedFilter.getFrom());
         assertEquals(10, capturedFilter.getSize());
     }
+
 
     @Test
     void shouldHandleEmptyEventsList() {
@@ -130,11 +142,37 @@ class EventAdminControllerTests {
                 .thenReturn(Collections.emptyList());
 
         Collection<EventDtoResponse> result = eventAdminController.getEvents(
-                null, null, null, null, null, 0, 10);
+                null, null, null, null, null, null, null, null, null, 0, 10);
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
         verify(eventService, times(1)).getFullEventsBy(any(EventAdminFilter.class));
+    }
+
+    @Test
+    void shouldReturnEventsWithLocationFilter() {
+        Double lat = 55.751244;
+        Double lon = 37.618423;
+        Double radius = 5.0;
+
+        EventDtoResponse event = getEventDtoResponse();
+        when(eventService.getFullEventsBy(any(EventAdminFilter.class)))
+                .thenReturn(List.of(event));
+
+        Collection<EventDtoResponse> result = eventAdminController.getEvents(
+                null, null, null, null, null, null, lat, lon, radius, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+
+        ArgumentCaptor<EventAdminFilter> filterCaptor = ArgumentCaptor.forClass(EventAdminFilter.class);
+        verify(eventService, times(1)).getFullEventsBy(filterCaptor.capture());
+
+        EventAdminFilter capturedFilter = filterCaptor.getValue();
+        assertNotNull(capturedFilter.getZone());
+        assertEquals(lat, capturedFilter.getZone().getLatitude());
+        assertEquals(lon, capturedFilter.getZone().getLongitude());
+        assertEquals(radius, capturedFilter.getZone().getRadius());
     }
 
     @Test
@@ -164,6 +202,11 @@ class EventAdminControllerTests {
         assertEquals("Updated Title", result.getTitle());
         assertEquals(updateDto.getAnnotation(), result.getAnnotation());
         assertEquals(updateDto.getDescription(), result.getDescription());
+        assertEquals(updateDto.getEventDate(), result.getEventDate());
+        assertEquals(updateDto.getPaid(), result.getPaid());
+        assertEquals(updateDto.getParticipantLimit(), result.getParticipantLimit());
+        assertEquals(updateDto.getRequestModeration(), result.getRequestModeration());
+        assertEquals(EventState.PUBLISHED, result.getState());
 
         verify(eventService, times(1)).updateEventByAdmin(eventId, updateDto);
     }
@@ -190,7 +233,7 @@ class EventAdminControllerTests {
                 .thenReturn(List.of(event));
 
         Collection<EventDtoResponse> result = eventAdminController.getEvents(
-                null, null, null, null, null, 0, 10);
+                null, null, null, null, null, null, null, null, null, 0, 10);
 
         assertNotNull(result);
         assertEquals(1, result.size());
@@ -206,5 +249,27 @@ class EventAdminControllerTests {
         assertNull(capturedFilter.getRangeEnd());
         assertEquals(0, capturedFilter.getFrom());
         assertEquals(10, capturedFilter.getSize());
+    }
+
+    @Test
+    void shouldGetEventsWithLocationIdFilter() {
+        Long locationId = 5L;
+
+        EventDtoResponse event = getEventDtoResponse();
+        when(eventService.getFullEventsBy(any(EventAdminFilter.class)))
+                .thenReturn(List.of(event));
+
+        Collection<EventDtoResponse> result = eventAdminController.getEvents(
+                null, null, null, null, null, locationId, null, null, null, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+
+        ArgumentCaptor<EventAdminFilter> filterCaptor = ArgumentCaptor.forClass(EventAdminFilter.class);
+        verify(eventService, times(1)).getFullEventsBy(filterCaptor.capture());
+
+        EventAdminFilter capturedFilter = filterCaptor.getValue();
+        assertEquals(locationId, capturedFilter.getLocationId());
+        assertNull(capturedFilter.getZone());
     }
 }

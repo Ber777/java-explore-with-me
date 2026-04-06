@@ -2,8 +2,8 @@ package ewm.event.controller;
 
 import client.*;
 import ewm.event.dto.*;
-import ewm.event.model.EventFilter;
-import ewm.event.model.EventState;
+import ewm.event.model.*;
+import ewm.location.model.Zone;
 import ewm.event.service.EventService;
 import ewm.exception.InvalidRequestException;
 
@@ -12,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.validation.annotation.Validated;
@@ -22,9 +24,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.HttpServletRequest;
 
-import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.List;
+import java.util.Collection;
+import java.time.LocalDateTime;
 
 import static ewm.Constants.*;
 
@@ -51,6 +53,10 @@ public class EventPublicController {
             @RequestParam(required = false) @DateTimeFormat(pattern = DATE_TIME_FORMAT) LocalDateTime rangeStart,
             @RequestParam(required = false) @DateTimeFormat(pattern = DATE_TIME_FORMAT) LocalDateTime rangeEnd,
             @RequestParam(defaultValue = "false") Boolean onlyAvailable,
+            @RequestParam(required = false) Long location,
+            @RequestParam(required = false) @DecimalMin("-90.0")  @DecimalMax("90.0")  Double lat,
+            @RequestParam(required = false) @DecimalMin("-180.0") @DecimalMax("180.0") Double lon,
+            @RequestParam(defaultValue = "10.0") @DecimalMin("0.0") Double radius,
             @RequestParam(defaultValue = "EVENT_DATE") String sort,
             @RequestParam(defaultValue = "0") Integer from,
             @RequestParam(defaultValue = "10") Integer size,
@@ -60,6 +66,7 @@ public class EventPublicController {
                 .text(text)
                 .categories(categories)
                 .paid(paid)
+                .locationId(location)
                 .rangeStart(rangeStart)
                 .rangeEnd(rangeEnd)
                 .onlyAvailable(onlyAvailable)
@@ -68,6 +75,11 @@ public class EventPublicController {
                 .size(size)
                 .state(EventState.PUBLISHED)
                 .build();
+
+        log.debug("Запрос на получение общедоступных событий");
+
+        if (lat != null && lon != null)
+            filter.setZone(new Zone(lat, lon, radius));
 
         if (filter.getRangeStart() != null && filter.getRangeEnd() != null
                 && filter.getRangeStart().isAfter(filter.getRangeEnd())) {

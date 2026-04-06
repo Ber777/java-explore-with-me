@@ -4,6 +4,7 @@ import ewm.exception.*;
 import ewm.event.model.*;
 import ewm.compilation.dto.*;
 import ewm.user.model.User;
+import ewm.location.model.Location;
 import ewm.category.model.Category;
 import ewm.compilation.model.Compilation;
 import ewm.event.repository.EventRepository;
@@ -249,6 +250,18 @@ class CompilationServiceImplTests {
                 .name("Test Category")
                 .build();
 
+        Location location1 = Location.builder()
+                .id(1L)
+                .latitude(55.7558)
+                .longitude(37.6173)
+                .build();
+
+        Location location2 = Location.builder()
+                .id(2L)
+                .latitude(59.9343)
+                .longitude(30.3351)
+                .build();
+
         // Инициализируем события с заполненной категорией и другими обязательными полями
         Event event1 = Event.builder()
                 .id(1L)
@@ -256,8 +269,7 @@ class CompilationServiceImplTests {
                 .category(category)
                 .initiator(User.builder().id(1L).build())
                 .eventDate(LocalDateTime.now().plusDays(1))
-                .locationLat(55.7558)
-                .locationLon(37.6173)
+                .location(location1)
                 .build();
 
         Event event2 = Event.builder()
@@ -266,8 +278,7 @@ class CompilationServiceImplTests {
                 .category(category)
                 .initiator(User.builder().id(2L).build())
                 .eventDate(LocalDateTime.now().plusDays(2))
-                .locationLat(59.9343)
-                .locationLon(30.3351)
+                .location(location2)
                 .build();
 
         List<Event> events = List.of(event1, event2);
@@ -337,6 +348,12 @@ class CompilationServiceImplTests {
                 .name("Test Category")
                 .build();
 
+        Location location = Location.builder()
+                .id(1L)
+                .latitude(55.7558)
+                .longitude(37.6173)
+                .build();
+
         // Инициализируем событие с заполненной категорией и другими обязательными полями
         Event existingEvent = Event.builder()
                 .id(1L)
@@ -344,8 +361,7 @@ class CompilationServiceImplTests {
                 .category(category)
                 .initiator(User.builder().id(1L).build())
                 .eventDate(LocalDateTime.now().plusDays(1))
-                .locationLat(55.7558)
-                .locationLon(37.6173)
+                .location(location)
                 .build();
 
         Compilation existingCompilation = getCompilation();
@@ -435,6 +451,18 @@ class CompilationServiceImplTests {
                 .name("Test Category")
                 .build();
 
+        Location location3 = Location.builder()
+                .id(3L)
+                .latitude(55.7558)
+                .longitude(37.6173)
+                .build();
+
+        Location location4 = Location.builder()
+                .id(4L)
+                .latitude(59.9343)
+                .longitude(30.3351)
+                .build();
+
         // Инициализируем события с заполненной категорией
         Event event3 = Event.builder()
                 .id(3L)
@@ -442,8 +470,7 @@ class CompilationServiceImplTests {
                 .category(category)
                 .initiator(User.builder().id(1L).build())
                 .eventDate(LocalDateTime.now().plusDays(1))
-                .locationLat(55.7558)
-                .locationLon(37.6173)
+                .location(location3)
                 .build();
 
         Event event4 = Event.builder()
@@ -452,8 +479,7 @@ class CompilationServiceImplTests {
                 .category(category)
                 .initiator(User.builder().id(2L).build())
                 .eventDate(LocalDateTime.now().plusDays(2))
-                .locationLat(59.9343)
-                .locationLon(30.3351)
+                .location(location4)
                 .build();
 
         Compilation existingCompilation = getCompilation();

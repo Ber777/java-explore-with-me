@@ -1,6 +1,6 @@
 package ewm.event.dto;
 
-import jakarta.validation.constraints.*;
+import ewm.location.dto.LocationDto;
 
 import lombok.Data;
 import lombok.Builder;
@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.*;
 
 import java.time.LocalDateTime;
 
@@ -26,7 +27,7 @@ public class EventDto {
     @Size(min = 20, max = 2000, message = "Аннотация должна содержать минимум 20 и максимум 2000 символов")
     private String annotation;
 
-    @NotNull
+    @NotNull(message = "Категория не может быть пустой")
     @JsonProperty("category")
     private Long categoryId;
 
@@ -39,11 +40,11 @@ public class EventDto {
     @JsonFormat(pattern = DATE_TIME_FORMAT)
     private LocalDateTime eventDate;
 
-    @NotNull
-    private LocationDto location;
-
     @Builder.Default
     private Boolean paid = false;
+
+    @NotNull(message = "Локация не может быть пустой")
+    private LocationDto location;
 
     @Min(0)
     @Builder.Default

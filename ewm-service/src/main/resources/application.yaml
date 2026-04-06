@@ -24,6 +24,7 @@ spring:
 
 logging:
   level:
+    ewm: DEBUG
     org.springframework.orm.jpa: INFO
     org.springframework.transaction: INFO
     org.springframework.jdbc: DEBUG
