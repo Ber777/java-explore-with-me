@@ -13,9 +13,9 @@ import java.time.LocalDateTime;
 
 import static ewm.Constants.DATE_TIME_FORMAT;
 
-@Data
+@Getter
+@Setter
 @Builder
-@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 public class EventAdminFilter {

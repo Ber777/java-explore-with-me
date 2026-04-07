@@ -113,7 +113,6 @@ public class EventServiceImpl implements EventService {
         Optional.ofNullable(eventDto.getTitle()).ifPresent(event::setTitle);
         Optional.ofNullable(eventDto.getAnnotation()).ifPresent(event::setAnnotation);
         Optional.ofNullable(eventDto.getDescription()).ifPresent(event::setDescription);
-        Optional.ofNullable(eventDto.getParticipantLimit()).ifPresent(event::setParticipantLimit);
         Optional.ofNullable(eventDto.getPaid()).ifPresent(event::setPaid);
         Optional.ofNullable(eventDto.getLocation()).ifPresent(loc -> {
             Location location = locationService.getOrCreateLocation(eventDto.getLocation());
@@ -296,13 +295,7 @@ public class EventServiceImpl implements EventService {
     }
 
     private Map<Long, Integer> getViewsCount(List<Long> eventIds) {
-        Map<Long, Integer> statistics = getStatistics(eventIds);
-
-        if (statistics == null) {
-            return new HashMap<>();
-        }
-
-        return statistics;
+        return getStatistics(eventIds);
     }
 
     @SuppressWarnings("UnusedReturnValue")

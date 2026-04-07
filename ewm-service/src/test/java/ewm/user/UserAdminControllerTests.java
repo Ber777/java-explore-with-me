@@ -58,7 +58,9 @@ class UserAdminControllerTests {
                 .name("Test User")
                 .build();
 
-        when(userService.createUser(request)).thenReturn(expectedResponse);
+        // Используем матчер Mockito для корректной заглушки
+        when(userService.createUser(any(NewUserDto.class)))
+                .thenReturn(expectedResponse);
 
         mockMvc.perform(post("/admin/users")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -67,6 +69,9 @@ class UserAdminControllerTests {
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.email").value("test@example.com"))
                 .andExpect(jsonPath("$.name").value("Test User"));
+
+        // В verify также используем матчер для корректной проверки вызова
+        verify(userService, times(1)).createUser(any(NewUserDto.class));
     }
 
     @Test

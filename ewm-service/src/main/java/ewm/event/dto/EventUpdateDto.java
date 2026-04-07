@@ -14,9 +14,11 @@ import java.time.LocalDateTime;
 
 import static ewm.Constants.DATE_TIME_FORMAT;
 
-@Data
+@Getter
+@Setter
 @Builder
-@ToString
+@NoArgsConstructor
+@AllArgsConstructor
 public class EventUpdateDto {
     @Size(min = 3, max = 120, message = "Заголовок должен содержать минимум 3 и максимум 120 символов")
     private String title;

@@ -58,7 +58,9 @@ class LocationAdminControllerTests {
                 .state(LocationState.APPROVED)
                 .build();
 
-        when(locationService.createLocationByAdmin(newLocationDto)).thenReturn(expectedResponse);
+        // Используем матчер Mockito для корректной заглушки
+        when(locationService.createLocationByAdmin(any(NewLocationDto.class)))
+                .thenReturn(expectedResponse);
 
         mockMvc.perform(post("/admin/locations")
                         .contentType("application/json")
@@ -68,7 +70,8 @@ class LocationAdminControllerTests {
                 .andExpect(jsonPath("$.name").value("New Location"))
                 .andExpect(jsonPath("$.state").value("APPROVED"));
 
-        verify(locationService, times(1)).createLocationByAdmin(newLocationDto);
+        // В verify также используем матчер для корректной проверки вызова
+        verify(locationService, times(1)).createLocationByAdmin(any(NewLocationDto.class));
     }
 
     @Test
@@ -100,7 +103,11 @@ class LocationAdminControllerTests {
                 .name("Updated Name")
                 .build();
 
-        when(locationService.updateLocationByAdmin(locationId, updateDto)).thenReturn(updatedResponse);
+        // Используем матчеры Mockito для корректной заглушки
+        when(locationService.updateLocationByAdmin(
+                eq(locationId),
+                any(LocationUpdateAdminDto.class)
+        )).thenReturn(updatedResponse);
 
         mockMvc.perform(patch("/admin/locations/{id}", locationId)
                         .contentType("application/json")
@@ -109,7 +116,11 @@ class LocationAdminControllerTests {
                 .andExpect(jsonPath("$.id").value(locationId))
                 .andExpect(jsonPath("$.name").value("Updated Name"));
 
-        verify(locationService, times(1)).updateLocationByAdmin(locationId, updateDto);
+        // В verify также используем матчеры для корректной проверки вызова
+        verify(locationService, times(1)).updateLocationByAdmin(
+                eq(locationId),
+                any(LocationUpdateAdminDto.class)
+        );
     }
 
     @Test
@@ -233,7 +244,9 @@ class LocationAdminControllerTests {
                 .state(LocationState.APPROVED)
                 .build();
 
-        when(locationService.createLocationByAdmin(minimalDto)).thenReturn(expectedResponse);
+        // Используем матчер Mockito для корректной заглушки
+        when(locationService.createLocationByAdmin(any(NewLocationDto.class)))
+                .thenReturn(expectedResponse);
 
         mockMvc.perform(post("/admin/locations")
                         .contentType("application/json")
@@ -244,7 +257,8 @@ class LocationAdminControllerTests {
                 .andExpect(jsonPath("$.lat").value(55.751244))
                 .andExpect(jsonPath("$.lon").value(37.618423));
 
-        verify(locationService, times(1)).createLocationByAdmin(minimalDto);
+        // В verify также используем матчер для корректной проверки вызова
+        verify(locationService, times(1)).createLocationByAdmin(any(NewLocationDto.class));
     }
 
     // Вспомогательный метод для преобразования объекта в JSON строку

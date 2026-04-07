@@ -5,9 +5,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 
-@Data
+@Getter
+@Setter
 @Builder
-@ToString
 @AllArgsConstructor
 public class LocationPrivateFilter {
     private String text;

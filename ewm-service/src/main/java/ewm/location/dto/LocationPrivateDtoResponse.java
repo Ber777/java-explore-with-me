@@ -5,9 +5,9 @@ import ewm.location.model.LocationState;
 import lombok.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-@Data
+@Getter
+@Setter
 @Builder
-@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 public class LocationPrivateDtoResponse {

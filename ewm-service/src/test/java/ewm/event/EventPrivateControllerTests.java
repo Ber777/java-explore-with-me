@@ -117,8 +117,12 @@ class EventPrivateControllerTests {
                 .title("Updated Title")
                 .build();
 
-        when(eventService.updateEventByUser(userId, eventId, updateDto))
-                .thenReturn(responseDto);
+        // Используем матчеры Mockito для корректной заглушки
+        when(eventService.updateEventByUser(
+                eq(userId),
+                eq(eventId),
+                any(EventUpdateDto.class)
+        )).thenReturn(responseDto);
 
         mockMvc.perform(patch("/users/{userId}/events/{eventId}", userId, eventId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -127,7 +131,12 @@ class EventPrivateControllerTests {
                 .andExpect(jsonPath("$.id").value(eventId))
                 .andExpect(jsonPath("$.title").value("Updated Title"));
 
-        verify(eventService, times(1)).updateEventByUser(userId, eventId, updateDto);
+        // В verify также используем матчеры для корректной проверки вызовов
+        verify(eventService, times(1)).updateEventByUser(
+                eq(userId),
+                eq(eventId),
+                any(EventUpdateDto.class)
+        );
     }
 
     @Test
@@ -207,7 +216,11 @@ class EventPrivateControllerTests {
         EventUpdateDto updateDto = EventUpdateDto.builder().title("Update").build();
 
         doThrow(new NoAccessException("Нет доступа к событию"))
-                .when(eventService).updateEventByUser(userId, eventId, updateDto);
+                .when(eventService).updateEventByUser(
+                        eq(userId),
+                        eq(eventId),
+                        any(EventUpdateDto.class)
+                );
 
         mockMvc.perform(patch("/users/{userId}/events/{eventId}", userId, eventId)
                         .contentType(MediaType.APPLICATION_JSON)

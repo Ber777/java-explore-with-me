@@ -1,16 +1,14 @@
 package ewm.request.dto;
 
-import lombok.Data;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import lombok.*;
 
 import java.util.List;
 
-@Data
+@Getter
+@Setter
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class EventRequestStatusUpdateResponse {
     private List<UserRequestDto> confirmedRequests;
     private List<UserRequestDto> rejectedRequests;

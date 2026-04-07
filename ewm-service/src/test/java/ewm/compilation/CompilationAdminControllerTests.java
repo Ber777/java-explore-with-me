@@ -72,8 +72,11 @@ public class CompilationAdminControllerTests {
                 .events(eventResponses)
                 .build();
 
-        when(compilationService.updateCompilation(compId, updateRequest))
-                .thenReturn(updatedCompilation);
+        // Используем матчеры Mockito для корректной заглушки
+        when(compilationService.updateCompilation(
+                eq(compId),
+                any(CompilationUpdateDto.class)
+        )).thenReturn(updatedCompilation);
 
         mockMvc.perform(patch("/admin/compilations/" + compId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -86,6 +89,12 @@ public class CompilationAdminControllerTests {
                 .andExpect(jsonPath("$.events[0].id").value(1L))
                 .andExpect(jsonPath("$.events[1].id").value(2L))
                 .andExpect(jsonPath("$.events[2].id").value(3L));
+
+        // В verify также используем матчеры для корректной проверки вызова
+        verify(compilationService, times(1)).updateCompilation(
+                eq(compId),
+                any(CompilationUpdateDto.class)
+        );
     }
 
     @Test
@@ -147,14 +156,23 @@ public class CompilationAdminControllerTests {
                 .events(List.of())
                 .build();
 
-        when(compilationService.updateCompilation(compId, updateRequest))
-                .thenReturn(updatedCompilation);
+        // Используем матчеры Mockito для корректной заглушки
+        when(compilationService.updateCompilation(
+                eq(compId),
+                any(CompilationUpdateDto.class)
+        )).thenReturn(updatedCompilation);
 
         mockMvc.perform(patch("/admin/compilations/" + compId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Updated Title"));
+
+        // Проверяем, что метод был вызван с правильными аргументами
+        verify(compilationService, times(1)).updateCompilation(
+                eq(compId),
+                any(CompilationUpdateDto.class)
+        );
     }
 
     @Test
@@ -173,8 +191,11 @@ public class CompilationAdminControllerTests {
                 .events(Collections.emptyList()) // события очищены
                 .build();
 
-        when(compilationService.updateCompilation(compId, updateRequest))
-                .thenReturn(updatedCompilation);
+        // Используем матчеры Mockito для корректной заглушки
+        when(compilationService.updateCompilation(
+                eq(compId),
+                any(CompilationUpdateDto.class)
+        )).thenReturn(updatedCompilation);
 
         mockMvc.perform(patch("/admin/compilations/" + compId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -182,6 +203,12 @@ public class CompilationAdminControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Updated Title"))
                 .andExpect(jsonPath("$.events").isEmpty());
+
+        // Проверяем, что метод был вызван с правильными аргументами
+        verify(compilationService, times(1)).updateCompilation(
+                eq(compId),
+                any(CompilationUpdateDto.class)
+        );
     }
 
     @Test
@@ -191,8 +218,12 @@ public class CompilationAdminControllerTests {
                 .title("Updated Title")
                 .build();
 
+        // Используем матчеры для корректного выброса исключения
         doThrow(new NotFoundException("Подборка", nonExistentId))
-                .when(compilationService).updateCompilation(nonExistentId, updateRequest);
+                .when(compilationService).updateCompilation(
+                        eq(nonExistentId),
+                        any(CompilationUpdateDto.class)
+                );
 
         mockMvc.perform(patch("/admin/compilations/" + nonExistentId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -201,6 +232,12 @@ public class CompilationAdminControllerTests {
                 .andExpect(jsonPath("$.message").isString())
                 .andExpect(jsonPath("$.reason").value("Запрашиваемый объект не найден"))
                 .andExpect(jsonPath("$.status").value("NOT_FOUND"));
+
+        // Проверяем, что метод был вызван с правильными аргументами
+        verify(compilationService, times(1)).updateCompilation(
+                eq(nonExistentId),
+                any(CompilationUpdateDto.class)
+        );
     }
 
     @Test
@@ -243,8 +280,11 @@ public class CompilationAdminControllerTests {
                 .events(List.of())
                 .build();
 
-        when(compilationService.updateCompilation(compId, updateRequest))
-                .thenReturn(updatedCompilation);
+        // Используем матчеры Mockito для корректной заглушки
+        when(compilationService.updateCompilation(
+                eq(compId),
+                any(CompilationUpdateDto.class)
+        )).thenReturn(updatedCompilation);
 
         mockMvc.perform(patch("/admin/compilations/" + compId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -253,5 +293,11 @@ public class CompilationAdminControllerTests {
                 .andExpect(jsonPath("$.id").value(compId))
                 .andExpect(jsonPath("$.pinned").value(true))
                 .andExpect(jsonPath("$.title").value("Existing Title"));
+
+        // Проверяем, что метод был вызван с правильными аргументами
+        verify(compilationService, times(1)).updateCompilation(
+                eq(compId),
+                any(CompilationUpdateDto.class)
+        );
     }
 }

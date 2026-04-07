@@ -7,9 +7,11 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-@Data
+@Getter
+@Setter
 @Builder
-@ToString
+@NoArgsConstructor
+@AllArgsConstructor
 public class LocationUpdateAdminDto {
     private String name;
     private String address;

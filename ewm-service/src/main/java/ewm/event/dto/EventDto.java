@@ -2,10 +2,7 @@ package ewm.event.dto;
 
 import ewm.location.dto.LocationDto;
 
-import lombok.Data;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import lombok.*;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.*;
@@ -14,7 +11,8 @@ import java.time.LocalDateTime;
 
 import static ewm.Constants.DATE_TIME_FORMAT;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

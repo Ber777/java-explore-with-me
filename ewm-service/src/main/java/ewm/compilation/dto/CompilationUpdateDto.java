@@ -5,7 +5,8 @@ import jakarta.validation.constraints.Size;
 
 import java.util.Set;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

@@ -3,10 +3,10 @@ package ewm.category.model;
 import lombok.*;
 import jakarta.persistence.*;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Builder
-@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "categories")

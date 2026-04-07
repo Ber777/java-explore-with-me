@@ -5,10 +5,10 @@ import ewm.user.model.User;
 import lombok.*;
 import jakarta.persistence.*;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Builder
-@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "locations")

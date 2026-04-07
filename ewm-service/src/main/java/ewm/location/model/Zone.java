@@ -1,10 +1,9 @@
 package ewm.location.model;
 
-import lombok.Data;
-import lombok.Builder;
-import lombok.AllArgsConstructor;
+import lombok.*;
 
-@Data
+@Getter
+@Setter
 @Builder
 @AllArgsConstructor
 public class Zone {

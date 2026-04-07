@@ -3,12 +3,14 @@ package ewm.request.model;
 import ewm.user.model.User;
 import ewm.event.model.Event;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "user_requests")
 public class UserRequest {

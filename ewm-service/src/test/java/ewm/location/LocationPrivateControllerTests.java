@@ -59,7 +59,11 @@ class LocationPrivateControllerTests {
                 .state(LocationState.PENDING)
                 .build();
 
-        when(locationService.createLocation(userId, newLocationDto)).thenReturn(expectedResponse);
+        // Используем матчеры Mockito для корректной заглушки
+        when(locationService.createLocation(
+                eq(userId),
+                any(NewLocationDto.class)
+        )).thenReturn(expectedResponse);
 
         mockMvc.perform(post("/users/{userId}/locations", userId)
                         .contentType("application/json")
@@ -69,7 +73,11 @@ class LocationPrivateControllerTests {
                 .andExpect(jsonPath("$.name").value("User Location"))
                 .andExpect(jsonPath("$.state").value("PENDING"));
 
-        verify(locationService, times(1)).createLocation(userId, newLocationDto);
+        // В verify также используем матчеры для корректной проверки вызова
+        verify(locationService, times(1)).createLocation(
+                eq(userId),
+                any(NewLocationDto.class)
+        );
     }
 
     @Test
@@ -86,7 +94,12 @@ class LocationPrivateControllerTests {
                 .state(LocationState.PENDING)
                 .build();
 
-        when(locationService.updateLocation(locationId, userId, updateDto)).thenReturn(updatedResponse);
+        // Используем матчеры Mockito для корректной заглушки
+        when(locationService.updateLocation(
+                eq(locationId),
+                eq(userId),
+                any(LocationUpdateUserDto.class)
+        )).thenReturn(updatedResponse);
 
         mockMvc.perform(patch("/users/{userId}/locations/{id}", userId, locationId)
                         .contentType("application/json")
@@ -95,7 +108,12 @@ class LocationPrivateControllerTests {
                 .andExpect(jsonPath("$.id").value(locationId))
                 .andExpect(jsonPath("$.name").value("Updated User Location"));
 
-        verify(locationService, times(1)).updateLocation(locationId, userId, updateDto);
+        // В verify также используем матчеры для корректной проверки вызова
+        verify(locationService, times(1)).updateLocation(
+                eq(locationId),
+                eq(userId),
+                any(LocationUpdateUserDto.class)
+        );
     }
 
     @Test
@@ -265,7 +283,11 @@ class LocationPrivateControllerTests {
                 .state(LocationState.PENDING)
                 .build();
 
-        when(locationService.createLocation(userId, minimalDto)).thenReturn(expectedResponse);
+        // Используем матчеры Mockito для корректной заглушки
+        when(locationService.createLocation(
+                eq(userId),
+                any(NewLocationDto.class)
+        )).thenReturn(expectedResponse);
 
         mockMvc.perform(post("/users/{userId}/locations", userId)
                         .contentType("application/json")
@@ -276,7 +298,11 @@ class LocationPrivateControllerTests {
                 .andExpect(jsonPath("$.lat").value(55.751244))
                 .andExpect(jsonPath("$.lon").value(37.618423));
 
-        verify(locationService, times(1)).createLocation(userId, minimalDto);
+        // В verify также используем матчеры для корректной проверки вызова
+        verify(locationService, times(1)).createLocation(
+                eq(userId),
+                any(NewLocationDto.class)
+        );
     }
 
     @Test
