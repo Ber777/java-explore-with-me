@@ -7,7 +7,6 @@ import jakarta.validation.constraints.NotBlank;
 @Getter
 @Setter
 @Builder
-@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 public class ViewStatsDto {

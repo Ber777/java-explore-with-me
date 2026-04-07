@@ -2,16 +2,17 @@ package ewm.event.model;
 
 import ewm.user.model.User;
 import ewm.category.model.Category;
+import ewm.location.model.Location;
 
 import lombok.*;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Builder
-@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "events")
@@ -49,15 +50,14 @@ public class Event {
     @Column(name = "published_on")
     private LocalDateTime publishedOn;
 
-    @Column(name = "location_lat", nullable = false)
-    private Double locationLat;
-
-    @Column(name = "location_lon", nullable = false)
-    private Double locationLon;
-
     @Builder.Default
     @Column(nullable = false)
     private Boolean paid = false;
+
+    @ToString.Exclude
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "location_id", nullable = false)
+    private Location location;
 
     @Builder.Default
     @Column(name = "participant_limit")

@@ -81,6 +81,10 @@ class EventPublicControllerTests {
         LocalDateTime rangeStart = LocalDateTime.now();
         LocalDateTime rangeEnd = LocalDateTime.now().plusDays(7);
         Boolean onlyAvailable = true;
+        Long locationId = 5L;
+        Double lat = 55.751244;
+        Double lon = 37.618423;
+        Double radius = 10.0;
         String sort = "VIEWS";
         Integer from = 5;
         Integer size = 20;
@@ -91,13 +95,33 @@ class EventPublicControllerTests {
         when(eventService.getShortEventsBy(any(EventFilter.class))).thenReturn(events);
 
         Collection<EventShortDtoResponse> result = eventPublicController.getEvents(
-                text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size, request);
+                text, categories, paid, rangeStart, rangeEnd, onlyAvailable,
+                locationId, lat, lon, radius, sort, from, size, request);
 
         assertNotNull(result);
         assertEquals(1, result.size());
         assertEquals(event.getId(), result.iterator().next().getId());
 
-        verify(eventService, times(1)).getShortEventsBy(any(EventFilter.class));
+        ArgumentCaptor<EventFilter> filterCaptor = ArgumentCaptor.forClass(EventFilter.class);
+        verify(eventService, times(1)).getShortEventsBy(filterCaptor.capture());
+
+        EventFilter capturedFilter = filterCaptor.getValue();
+        assertEquals(text, capturedFilter.getText());
+        assertEquals(categories, capturedFilter.getCategories());
+        assertEquals(paid, capturedFilter.getPaid());
+        assertEquals(rangeStart, capturedFilter.getRangeStart());
+        assertEquals(rangeEnd, capturedFilter.getRangeEnd());
+        assertEquals(onlyAvailable, capturedFilter.getOnlyAvailable());
+        assertEquals(locationId, capturedFilter.getLocationId());
+        assertEquals(sort, capturedFilter.getSort());
+        assertEquals(from, capturedFilter.getFrom());
+        assertEquals(size, capturedFilter.getSize());
+        assertEquals(EventState.PUBLISHED, capturedFilter.getState());
+        assertNotNull(capturedFilter.getZone());
+        assertEquals(lat, capturedFilter.getZone().getLatitude());
+        assertEquals(lon, capturedFilter.getZone().getLongitude());
+        assertEquals(radius, capturedFilter.getZone().getRadius());
+
         verify(statsClient, times(1)).endpointHit(anyString(), eq("/events/1"), anyString());
         verify(statsClient, times(1)).endpointHit(anyString(), eq("/events"), anyString());
     }
@@ -109,7 +133,8 @@ class EventPublicControllerTests {
 
         InvalidRequestException exception = assertThrows(InvalidRequestException.class,
                 () -> eventPublicController.getEvents(
-                        "test", null, null, rangeStart, rangeEnd, false, "EVENT_DATE", 0, 10, request));
+                        "test", null, null, rangeStart, rangeEnd, false,
+                        null, null, null, null, "EVENT_DATE", 0, 10, request));
 
         assertEquals("Дата начала должна быть раньше, чем дата окончания.", exception.getMessage());
         verify(eventService, never()).getShortEventsBy(any());
@@ -151,7 +176,8 @@ class EventPublicControllerTests {
                 .thenReturn(Collections.emptyList());
 
         Collection<EventShortDtoResponse> result = eventPublicController.getEvents(
-                null, null, null, null, null, false, "EVENT_DATE", 0, 10, request);
+                null, null, null, null, null, false, null, null, null, null,
+                "EVENT_DATE", 0, 10, request);
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
@@ -165,7 +191,8 @@ class EventPublicControllerTests {
                 .thenReturn(List.of(event));
 
         Collection<EventShortDtoResponse> result = eventPublicController.getEvents(
-                null, null, null, null, null, null, null, null, null, request);
+                null, null, null, null, null, null, null, null, null, null,
+                null, null, null, request);
 
         assertNotNull(result);
         assertEquals(1, result.size());
@@ -175,12 +202,68 @@ class EventPublicControllerTests {
 
         EventFilter capturedFilter = filterCaptor.getValue();
 
-        // Проверяем с учётом возможного null
-        assertFalse(capturedFilter.getOnlyAvailable() != null ? capturedFilter.getOnlyAvailable() : false);
-        assertEquals("EVENT_DATE", capturedFilter.getSort() != null ? capturedFilter.getSort() : "EVENT_DATE");
-        assertEquals(0, capturedFilter.getFrom() != null ? capturedFilter.getFrom() : 0);
-        assertEquals(10, capturedFilter.getSize() != null ? capturedFilter.getSize() : 10);
-        assertEquals(EventState.PUBLISHED, capturedFilter.getState() != null ? capturedFilter.getState() : EventState.PUBLISHED);
+        assertNull(capturedFilter.getText());
+        assertNull(capturedFilter.getCategories());
+        assertNull(capturedFilter.getPaid());
+        assertNull(capturedFilter.getLocationId());
+        assertNull(capturedFilter.getRangeStart());
+        assertNull(capturedFilter.getRangeEnd());
+        assertNull(capturedFilter.getOnlyAvailable());
+        assertNull(capturedFilter.getSort());
+        assertNull(capturedFilter.getFrom());
+        assertNull(capturedFilter.getSize());
+        assertEquals(EventState.PUBLISHED, capturedFilter.getState());
+        assertNull(capturedFilter.getZone());
+    }
+
+    @Test
+    void shouldGetEventsWithLocationFilter() {
+        Double lat = 55.751244;
+        Double lon = 37.618423;
+        Double radius = 5.0;
+
+        EventShortDtoResponse event = getEventShortDtoResponse("Event with Location");
+        when(eventService.getShortEventsBy(any(EventFilter.class)))
+                .thenReturn(List.of(event));
+
+        Collection<EventShortDtoResponse> result = eventPublicController.getEvents(
+                null, null, null, null, null, false, null, lat, lon, radius,
+                "EVENT_DATE", 0, 10, request);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+
+        ArgumentCaptor<EventFilter> filterCaptor = ArgumentCaptor.forClass(EventFilter.class);
+        verify(eventService, times(1)).getShortEventsBy(filterCaptor.capture());
+
+        EventFilter capturedFilter = filterCaptor.getValue();
+        assertNotNull(capturedFilter.getZone());
+        assertEquals(lat, capturedFilter.getZone().getLatitude());
+        assertEquals(lon, capturedFilter.getZone().getLongitude());
+        assertEquals(radius, capturedFilter.getZone().getRadius());
+    }
+
+    @Test
+    void shouldGetEventsWithLocationIdFilter() {
+        Long locationId = 5L;
+
+        EventShortDtoResponse event = getEventShortDtoResponse("Location ID Event");
+        when(eventService.getShortEventsBy(any(EventFilter.class)))
+                .thenReturn(List.of(event));
+
+        Collection<EventShortDtoResponse> result = eventPublicController.getEvents(
+                null, null, null, null, null, false, locationId, null, null, null,
+                "EVENT_DATE", 0, 10, request);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+
+        ArgumentCaptor<EventFilter> filterCaptor = ArgumentCaptor.forClass(EventFilter.class);
+        verify(eventService, times(1)).getShortEventsBy(filterCaptor.capture());
+
+        EventFilter capturedFilter = filterCaptor.getValue();
+        assertEquals(locationId, capturedFilter.getLocationId());
+        assertNull(capturedFilter.getZone());
     }
 
     @Test
@@ -192,7 +275,8 @@ class EventPublicControllerTests {
                 .when(statsClient).endpointHit(anyString(), anyString(), anyString());
 
         Collection<EventShortDtoResponse> result = eventPublicController.getEvents(
-                "test", null, null, null, null, false, "EVENT_DATE", 0, 10, request);
+                "test", null, null, null, null, false, null, null, null, null,
+                "EVENT_DATE", 0, 10, request);
 
         assertNotNull(result);
         assertEquals(1, result.size());

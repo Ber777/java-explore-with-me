@@ -7,7 +7,8 @@ import jakarta.validation.constraints.NotBlank;
 
 import java.util.Set;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

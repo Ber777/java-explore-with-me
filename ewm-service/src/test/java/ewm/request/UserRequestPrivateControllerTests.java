@@ -51,17 +51,24 @@ class UserRequestPrivateControllerTests {
     void shouldReturnOkOnUpdate() throws Exception {
         Long userId = 1L;
         Long eventId = 100L;
+
         EventRequestStatusUpdateDto requestDto = EventRequestStatusUpdateDto.builder()
                 .requestIds(List.of(1L, 2L))
                 .status("CONFIRMED")
                 .build();
 
         EventRequestStatusUpdateResponse response = EventRequestStatusUpdateResponse.builder()
-                .confirmedRequests(List.of(UserRequestDto.builder().id(1L).status("CONFIRMED").build()))
+                .confirmedRequests(List.of(
+                        UserRequestDto.builder().id(1L).status("CONFIRMED").build()
+                ))
                 .rejectedRequests(List.of())
                 .build();
 
-        when(requestService.updateRequestStatus(userId, eventId, requestDto)).thenReturn(response);
+        when(requestService.updateRequestStatus(
+                eq(userId),
+                eq(eventId),
+                any(EventRequestStatusUpdateDto.class)
+        )).thenReturn(response);
 
         mockMvc.perform(patch("/users/{userId}/events/{eventId}/requests", userId, eventId)
                         .contentType(MediaType.APPLICATION_JSON)

@@ -18,7 +18,7 @@ import java.util.Collection;
 @Transactional(readOnly = true)
 public class CategoryServiceImpl implements CategoryService {
     private final CategoryRepository categoryRepository;
-    public final EventRepository eventRepository;
+    private final EventRepository eventRepository;
 
     @Override
     public Collection<CategoryDtoResponse> getAllCategories(Integer offset, Integer limit) {

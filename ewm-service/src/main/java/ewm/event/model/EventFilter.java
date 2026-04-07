@@ -1,5 +1,7 @@
 package ewm.event.model;
 
+import ewm.location.model.Zone;
+
 import lombok.*;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Pageable;
@@ -11,9 +13,9 @@ import java.time.LocalDateTime;
 
 import static ewm.Constants.DATE_TIME_FORMAT;
 
-@Data
+@Getter
+@Setter
 @Builder
-@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 public class EventFilter {
@@ -41,6 +43,9 @@ public class EventFilter {
 
     @Builder.Default
     private EventState state = EventState.PUBLISHED;
+
+    private Zone zone;
+    private Long locationId;
 
     private Pageable pageable;
 

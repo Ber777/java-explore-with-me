@@ -12,3 +12,7 @@ spring:
     password: 123456
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
+
+logging:
+  level:
+    ewm: DEBUG

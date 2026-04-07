@@ -3,10 +3,10 @@ package ewm.user.model;
 import lombok.*;
 import jakarta.persistence.*;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Builder
-@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "users")

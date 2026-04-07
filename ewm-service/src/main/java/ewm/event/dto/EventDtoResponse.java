@@ -2,6 +2,7 @@ package ewm.event.dto;
 
 import ewm.user.dto.UserDto;
 import ewm.event.model.EventState;
+import ewm.location.dto.LocationDtoResponse;
 import ewm.category.dto.CategoryDtoResponse;
 
 import lombok.*;
@@ -11,9 +12,9 @@ import java.time.LocalDateTime;
 
 import static ewm.Constants.DATE_TIME_FORMAT;
 
-@Data
+@Getter
+@Setter
 @Builder
-@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 public class EventDtoResponse {
@@ -23,7 +24,7 @@ public class EventDtoResponse {
     private String description;
     private CategoryDtoResponse category;
     private UserDto initiator;
-    private LocationDto location;
+    private LocationDtoResponse location;
 
     @JsonFormat(pattern = DATE_TIME_FORMAT)
     private LocalDateTime eventDate;

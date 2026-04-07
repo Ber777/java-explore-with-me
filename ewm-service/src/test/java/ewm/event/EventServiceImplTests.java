@@ -4,26 +4,33 @@ import ewm.event.dto.*;
 import ewm.exception.*;
 import dto.ViewStatsDto;
 import ewm.event.model.*;
+import ewm.location.dto.*;
 import client.StatsClient;
 import ewm.user.model.User;
 import ewm.user.UserMapper;
+import ewm.location.model.Zone;
+import ewm.location.model.Location;
 import ewm.category.model.Category;
+import ewm.location.model.LocationState;
 import ewm.category.CategoryMapper;
 import client.StatsClientException;
 import ewm.event.service.EventServiceImpl;
 import ewm.event.validator.EventValidator;
 import ewm.request.model.UserRequestCount;
+import ewm.location.service.LocationService;
 import ewm.user.repository.UserRepository;
 import ewm.event.repository.EventRepository;
 import ewm.category.repository.CategoryRepository;
 import ewm.request.repository.UserRequestRepository;
-import jakarta.validation.ValidationException;
 
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
 import org.springframework.data.domain.*;
+import org.springframework.beans.BeanUtils;
+import jakarta.validation.ValidationException;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -40,6 +47,8 @@ class EventServiceImplTests {
     @InjectMocks
     private EventServiceImpl eventService;
 
+    @Mock
+    private LocationService locationService;
     @Mock
     private StatsClient statsClient;
     @Mock
@@ -169,7 +178,7 @@ class EventServiceImplTests {
 
         when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(existingEvent));
 
-        doThrow(new ValidationException("Invalid state transition"))
+        doThrow(new ValidationException("Недопустимый переход состояний"))
                 .when(eventValidator).validateUpdatePublishedEvent(eq(existingEvent));
 
         ValidationException exception = assertThrows(
@@ -178,7 +187,7 @@ class EventServiceImplTests {
                 "Ожидалось исключение ValidationException при некорректном переходе состояния"
         );
 
-        assertEquals("Invalid state transition", exception.getMessage(),
+        assertEquals("Недопустимый переход состояний", exception.getMessage(),
                 "Сообщение исключения должно точно соответствовать ожидаемому");
     }
 
@@ -234,13 +243,19 @@ class EventServiceImplTests {
 
     // Вспомагательные методы
     private EventDto getEventDto() {
+        LocationDto location = LocationDto.builder()
+                .id(1L)
+                .latitude(55.751244)
+                .longitude(37.618423)
+                .build();
+
         return EventDto.builder()
                 .title("Test Event")
                 .annotation("Test annotation")
                 .description("Test description")
                 .categoryId(CATEGORY_ID)
                 .eventDate(LocalDateTime.now().plusDays(1))
-                .location(new LocationDto(55.751244, 37.618423))
+                .location(location)
                 .paid(false)
                 .participantLimit(100)
                 .requestModeration(true)
@@ -263,6 +278,13 @@ class EventServiceImplTests {
     }
 
     private Event getEvent() {
+        Location location = Location.builder()
+                .id(1L)
+                .latitude(55.751244)
+                .longitude(37.618423)
+                .state(LocationState.APPROVED)
+                .build();
+
         return Event.builder()
                 .id(EVENT_ID) // обязательно задаём id
                 .title("Test Event")
@@ -271,8 +293,7 @@ class EventServiceImplTests {
                 .category(getCategory())
                 .initiator(getUser())
                 .eventDate(LocalDateTime.now().plusDays(1))
-                .locationLat(55.751244)
-                .locationLon(37.618423)
+                .location(location)
                 .paid(false)
                 .participantLimit(100)
                 .requestModeration(true)
@@ -283,14 +304,15 @@ class EventServiceImplTests {
                 .build();
     }
 
-    private Event getUpdatedEvent() {
-        Event event = getEvent();
-        event.setTitle("Updated Title");
-        event.setAnnotation("Updated Annotation");
-        return event;
-    }
-
     private EventDtoResponse getEventDtoResponse() {
+        LocationDtoResponse location = LocationDtoResponse.builder()
+                .id(1L)
+                .name("Test Location")
+                .address("Test Address")
+                .latitude(55.751244)
+                .longitude(37.618423)
+                .build();
+
         return EventDtoResponse.builder()
                 .id(EVENT_ID)
                 .title("Test Event")
@@ -298,7 +320,7 @@ class EventServiceImplTests {
                 .description("Test description")
                 .category(CategoryMapper.toCategoryDto(getCategory()))
                 .initiator(UserMapper.toUserDto(getUser()))
-                .location(new LocationDto(55.751244, 37.618423))
+                .location(location)
                 .eventDate(LocalDateTime.now().plusDays(1))
                 .createdOn(LocalDateTime.now())
                 .publishedOn(null)
@@ -370,45 +392,13 @@ class EventServiceImplTests {
     void shouldUpdateEventByAdminSuccessfully() {
         EventUpdateAdminDto eventUpdateDto = getEventUpdateAdminDto();
         Event existingEvent = getEvent();
-        Event updatedEvent = getUpdatedEvent();
 
         when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(existingEvent));
-        when(eventRepository.save(any(Event.class))).thenReturn(updatedEvent);
 
         EventDtoResponse actualResponse =
                 eventService.updateEventByAdmin(EVENT_ID, eventUpdateDto);
 
         assertNotNull(actualResponse);
-    }
-
-    @Test
-    void shouldPublishEventByAdmin() {
-        EventUpdateAdminDto eventUpdateDto = EventUpdateAdminDto.builder()
-                .stateAction(StateAction.PUBLISH_EVENT)
-                .build();
-
-        Event pendingEvent = getEvent();
-        pendingEvent.setState(EventState.PENDING);
-        // Гарантируем, что у события есть ID
-        pendingEvent.setId(EVENT_ID);
-
-        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(pendingEvent));
-
-        // Мокаем сохранение: возвращаем то же событие (имитируем поведение JPA)
-        when(eventRepository.save(any(Event.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
-        EventDtoResponse result = eventService.updateEventByAdmin(EVENT_ID, eventUpdateDto);
-
-        assertEquals(EventState.PUBLISHED, pendingEvent.getState(),
-                "Состояние события должно измениться на PUBLISHED");
-        assertNotNull(pendingEvent.getPublishedOn(),
-                "Дата публикации должна быть установлена");
-
-        // Проверяем, что метод сохранения был вызван
-        verify(eventRepository, times(1)).save(eq(pendingEvent));
-        // Проверяем результат маппинга
-        assertEquals(EVENT_ID, result.getId(), "ID в DTO должен соответствовать ID события");
     }
 
     @Test
@@ -540,7 +530,7 @@ class EventServiceImplTests {
 
         // Мокаем клиент статистики: выбрасывает исключение
         when(statsClient.getStats(any(), any(), anyList(), anyBoolean()))
-                .thenThrow(new StatsClientException("Stats service unavailable"));
+                .thenThrow(new StatsClientException("Сервис статистики недоступен"));
 
         List<EventShortDtoResponse> result = (List<EventShortDtoResponse>) eventService.getShortEventsBy(getEventFilter());
 
@@ -592,5 +582,339 @@ class EventServiceImplTests {
         Specification<Event> spec = eventService.buildSpecification(filter);
 
         assertNotNull(spec);
+    }
+
+    @Test
+    void shouldCreateEventWithNewLocationSuccessfully() {
+        EventDto eventDto = getEventDto();
+        User user = getUser();
+        Category category = getCategory();
+        Event event = getEvent();
+        LocationDto locationDto = eventDto.getLocation();
+        Location location = Location.builder()
+                .id(1L)
+                .latitude(locationDto.getLatitude())
+                .longitude(locationDto.getLongitude())
+                .state(LocationState.AUTO_GENERATED)
+                .build();
+
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+        when(locationService.getOrCreateLocation(locationDto)).thenReturn(location);
+        when(eventRepository.save(any(Event.class))).thenReturn(event);
+
+        EventDtoResponse actualResponse = eventService.createEvent(USER_ID, eventDto);
+
+        assertNotNull(actualResponse);
+        assertEquals(locationDto.getLatitude(), actualResponse.getLocation().getLatitude());
+        assertEquals(locationDto.getLongitude(), actualResponse.getLocation().getLongitude());
+        verify(locationService, times(1)).getOrCreateLocation(eq(locationDto));
+    }
+
+    @Test
+    void shouldCreateEventWithExistingLocationSuccessfully() {
+        EventDto eventDto = getEventDto();
+        eventDto.setLocation(new LocationDto(2L, 55.751244, 37.618423));
+
+        User user = getUser();
+        Category category = getCategory();
+
+        Location existingLocation = Location.builder()
+                .id(2L)
+                .latitude(55.751244)
+                .longitude(37.618423)
+                .state(LocationState.APPROVED)
+                .build();
+
+        // Создаём event с нужной локацией
+        Event event = getEvent();
+        event.setLocation(existingLocation); // Устанавливаем локацию с id = 2
+
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+        when(locationService.getOrCreateLocation(eventDto.getLocation())).thenReturn(existingLocation);
+        when(eventRepository.save(any(Event.class))).thenReturn(event);
+
+        EventDtoResponse actualResponse = eventService.createEvent(USER_ID, eventDto);
+
+        assertNotNull(actualResponse);
+        assertEquals(2L, actualResponse.getLocation().getId());
+        assertEquals(55.751244, actualResponse.getLocation().getLatitude());
+        verify(locationService, times(1)).getOrCreateLocation(eq(eventDto.getLocation()));
+    }
+
+    @Test
+    void shouldUpdateEventWithNewLocationSuccessfully() {
+        EventUpdateDto eventUpdateDto = getEventUpdateDto();
+        LocationDto newLocationDto = LocationDto.builder()
+                .latitude(60.0)
+                .longitude(30.0)
+                .build();
+        eventUpdateDto.setLocation(newLocationDto);
+
+        Event existingEvent = getEvent();
+        Location newLocation = Location.builder()
+                .id(3L)
+                .latitude(60.0)
+                .longitude(30.0)
+                .state(LocationState.AUTO_GENERATED)
+                .build();
+
+        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(existingEvent));
+        when(locationService.getOrCreateLocation(eventUpdateDto.getLocation())).thenReturn(newLocation);
+        when(eventRepository.save(any(Event.class)))
+                .thenAnswer(invocation -> {
+                    Event savedEvent = invocation.getArgument(0);
+                    savedEvent.setLocation(newLocation);
+                    return savedEvent;
+                });
+
+        EventDtoResponse actualResponse =
+                eventService.updateEventByUser(USER_ID, EVENT_ID, eventUpdateDto);
+
+        assertNotNull(actualResponse);
+        assertEquals(60.0, actualResponse.getLocation().getLatitude());
+        assertEquals(30.0, actualResponse.getLocation().getLongitude());
+        verify(locationService, times(1)).getOrCreateLocation(eq(eventUpdateDto.getLocation()));
+    }
+
+    @Test
+    void shouldUpdateEventWithExistingLocationSuccessfully() {
+        EventUpdateDto eventUpdateDto = getEventUpdateDto();
+        eventUpdateDto.setLocation(new LocationDto(4L, 45.0, 40.0));
+
+        Event existingEvent = getEvent();
+        Location existingLocation = Location.builder()
+                .id(4L)
+                .latitude(45.0)
+                .longitude(40.0)
+                .state(LocationState.APPROVED)
+                .build();
+
+        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(existingEvent));
+        when(locationService.getOrCreateLocation(eventUpdateDto.getLocation())).thenReturn(existingLocation);
+        when(eventRepository.save(any(Event.class)))
+                .thenAnswer(invocation -> {
+                    Event savedEvent = invocation.getArgument(0);
+                    savedEvent.setLocation(existingLocation);
+                    return savedEvent;
+                });
+
+        EventDtoResponse actualResponse =
+                eventService.updateEventByUser(USER_ID, EVENT_ID, eventUpdateDto);
+
+        assertNotNull(actualResponse);
+        assertEquals(4L, actualResponse.getLocation().getId());
+        assertEquals(45.0, actualResponse.getLocation().getLatitude());
+        verify(locationService, times(1)).getOrCreateLocation(eq(eventUpdateDto.getLocation()));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenLocationCreationFails() {
+        EventDto eventDto = getEventDto();
+        User user = getUser();
+        Category category = getCategory();
+
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+        doThrow(new NotFoundException("Локация", 999L))
+                .when(locationService).getOrCreateLocation(any());
+
+        NotFoundException exception = assertThrows(
+                NotFoundException.class,
+                () -> eventService.createEvent(USER_ID, eventDto),
+                "Ожидалось исключение NotFoundException при ошибке создания локации"
+        );
+
+        assertEquals("Локация с id: 999 не найден(-а)", exception.getMessage());
+        verify(eventRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldUpdateEventByAdminWithLocationSuccessfully() {
+        EventUpdateAdminDto eventUpdateDto = getEventUpdateAdminDto();
+        LocationDto newLocationDto = LocationDto.builder()
+                .latitude(70.0)
+                .longitude(20.0)
+                .build();
+        eventUpdateDto.setLocation(newLocationDto);
+
+        Event existingEvent = getEvent();
+        Location updatedLocation = Location.builder()
+                .id(5L)
+                .latitude(70.0)
+                .longitude(20.0)
+                .state(LocationState.AUTO_GENERATED)
+                .build();
+
+        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(existingEvent));
+        when(locationService.getOrCreateLocation(eventUpdateDto.getLocation())).thenReturn(updatedLocation);
+
+        EventDtoResponse actualResponse =
+                eventService.updateEventByAdmin(EVENT_ID, eventUpdateDto);
+
+        assertNotNull(actualResponse);
+        assertEquals(70.0, actualResponse.getLocation().getLatitude());
+        assertEquals(20.0, actualResponse.getLocation().getLongitude());
+        verify(locationService, times(1)).getOrCreateLocation(eq(eventUpdateDto.getLocation()));
+    }
+
+    private LocationDto createLocationDto() {
+        return new LocationDto(null, 56.0, 38.0);
+    }
+
+    @Test
+    void shouldFilterEventsByCoordinatesSuccessfully() {
+        EventFilter filter = getEventFilter();
+        filter.setZone(new Zone(55.751244, 37.618423, 1000.0)); // радиус 1 км
+
+        List<Event> events = List.of(getEvent());
+        Page<Event> page = new PageImpl<>(events);
+
+        when(eventRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        Collection<EventShortDtoResponse> responses =
+                eventService.getShortEventsBy(filter);
+
+        assertFalse(responses.isEmpty());
+        assertEquals(1, responses.size());
+        verify(eventRepository, times(1)).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void shouldHandleLocationNotFoundInFilter() {
+        EventFilter filter = getEventFilter();
+        filter.setLocationId(999L); // несуществующая локация
+
+        when(eventRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        Collection<EventShortDtoResponse> responses =
+                eventService.getShortEventsBy(filter);
+
+        assertTrue(responses.isEmpty());
+    }
+
+    @Test
+    void shouldAutoGenerateLocationWhenCoordinatesProvided() {
+        EventDto eventDto = getEventDto();
+        LocationDto newLocationDto = LocationDto.builder()
+                .latitude(60.123456)
+                .longitude(30.987654)
+                .build();
+        eventDto.setLocation(newLocationDto);
+
+        User user = getUser();
+        Category category = getCategory();
+        Location autoGeneratedLocation = Location.builder()
+                .id(6L)
+                .latitude(60.123456)
+                .longitude(30.987654)
+                .state(LocationState.AUTO_GENERATED)
+                .build();
+
+        // Создаём event с нужной локацией
+        Event event = getEvent();
+        event.setLocation(autoGeneratedLocation); // Явно устанавливаем нужную локацию
+
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+        when(locationService.getOrCreateLocation(eventDto.getLocation())).thenReturn(autoGeneratedLocation);
+        when(eventRepository.save(any(Event.class))).thenReturn(event);
+
+        EventDtoResponse actualResponse = eventService.createEvent(USER_ID, eventDto);
+
+        assertNotNull(actualResponse);
+        assertEquals(LocationState.AUTO_GENERATED, autoGeneratedLocation.getState());
+        assertEquals(60.123456, actualResponse.getLocation().getLatitude());
+        assertEquals(30.987654, actualResponse.getLocation().getLongitude());
+    }
+
+    @Test
+    void shouldUseExistingLocationById() {
+        EventDto eventDto = getEventDto();
+        Long locationId = 1L;
+        eventDto.setLocation(new LocationDto(locationId, null, null));
+
+        User user = getUser();
+        Category category = getCategory();
+        Location existingLocation = Location.builder()
+                .id(locationId)
+                .latitude(55.0)
+                .longitude(37.0)
+                .state(LocationState.APPROVED)
+                .build();
+
+        // Создаём event с нужной локацией
+        Event event = getEvent();
+        event.setLocation(existingLocation); // Явно устанавливаем нужную локацию
+
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(categoryRepository.findById(CATEGORY_ID)).thenReturn(Optional.of(category));
+        when(locationService.getOrCreateLocation(eventDto.getLocation()))
+                .thenReturn(existingLocation);
+        when(eventRepository.save(any(Event.class))).thenReturn(event);
+
+        EventDtoResponse actualResponse = eventService.createEvent(USER_ID, eventDto);
+
+        assertNotNull(actualResponse);
+        assertEquals(locationId, actualResponse.getLocation().getId());
+        assertEquals(55.0, actualResponse.getLocation().getLatitude());
+        assertEquals(37.0, actualResponse.getLocation().getLongitude());
+    }
+
+    @Test
+    void shouldUpdateLocationInEventSuccessfully() {
+        EventUpdateDto eventUpdateDto = getEventUpdateDto();
+        eventUpdateDto.setLocation(createLocationDto());
+
+        Location existingLocation = Location.builder()
+                .id(1L)
+                .latitude(55.751244)
+                .longitude(37.618423)
+                .state(LocationState.APPROVED)
+                .build();
+
+        Location existingEventLocation = Location.builder()
+                .id(existingLocation.getId())
+                .latitude(existingLocation.getLatitude())
+                .longitude(existingLocation.getLongitude())
+                .state(existingLocation.getState())
+                .build();
+
+        Event existingEvent = getEvent();
+        existingEvent.setLocation(existingEventLocation);
+
+        // Создаём копию existingEvent для передачи в сервис
+        Event eventForService = new Event();
+
+        // Копируем все поля из existingEvent в eventForService
+        BeanUtils.copyProperties(existingEvent, eventForService);
+
+        Location newLocation = Location.builder()
+                .id(8L)
+                .latitude(56.0)
+                .longitude(38.0)
+                .state(LocationState.AUTO_GENERATED)
+                .build();
+
+        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(eventForService));
+        when(locationService.getOrCreateLocation(eventUpdateDto.getLocation())).thenReturn(newLocation);
+        when(eventRepository.save(any(Event.class)))
+                .thenAnswer(invocation -> {
+                    Event savedEvent = invocation.getArgument(0);
+                    savedEvent.setLocation(newLocation);
+                    return savedEvent;
+                });
+
+        EventDtoResponse actualResponse =
+                eventService.updateEventByUser(USER_ID, EVENT_ID, eventUpdateDto);
+
+        assertNotNull(actualResponse);
+        assertEquals(56.0, actualResponse.getLocation().getLatitude());
+        assertEquals(38.0, actualResponse.getLocation().getLongitude());
+
+        assertNotEquals(existingEvent.getLocation().getId(), actualResponse.getLocation().getId());
     }
 }

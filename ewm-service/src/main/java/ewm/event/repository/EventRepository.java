@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import java.util.*;
 
 public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecificationExecutor<Event> {
+    boolean existsByLocationId(Long locationId);
 
     boolean existsByCategoryId(Long categoryId);
 

@@ -7,6 +7,8 @@ import dto.ViewStatsDto;
 import client.StatsClient;
 import ewm.user.model.User;
 import ewm.event.EventMapper;
+import ewm.location.model.Location;
+import ewm.location.service.LocationService;
 import client.StatsClientException;
 import ewm.category.model.Category;
 import ewm.event.validator.EventValidator;
@@ -18,10 +20,11 @@ import ewm.request.repository.UserRequestRepository;
 
 import java.util.*;
 import java.util.stream.Stream;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+
+import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +44,7 @@ public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final CategoryRepository categoryRepository;
     private final UserRequestRepository requestRepository;
+    private final LocationService locationService;
 
     @Override
     @Transactional
@@ -48,10 +52,12 @@ public class EventServiceImpl implements EventService {
         eventValidator.validateEventDate(eventDto.getEventDate(), EventState.PENDING);
         Category category = getCategory(eventDto.getCategoryId());
         User user = getUser(userId);
+        Location location = locationService.getOrCreateLocation(eventDto.getLocation());
 
         Event event = EventMapper.fromEventDto(eventDto);
         event.setCategory(category);
         event.setInitiator(user);
+        event.setLocation(location);
 
         event = eventRepository.save(event);
 
@@ -71,8 +77,8 @@ public class EventServiceImpl implements EventService {
         Optional.ofNullable(eventDto.getDescription()).ifPresent(event::setDescription);
         Optional.ofNullable(eventDto.getPaid()).ifPresent(event::setPaid);
         Optional.ofNullable(eventDto.getLocation()).ifPresent(loc -> {
-            event.setLocationLat(loc.getLat());
-            event.setLocationLon(loc.getLon());
+            Location location = locationService.getOrCreateLocation(eventDto.getLocation());
+            event.setLocation(location);
         });
         Optional.ofNullable(eventDto.getParticipantLimit()).ifPresent(event::setParticipantLimit);
         Optional.ofNullable(eventDto.getRequestModeration()).ifPresent(event::setRequestModeration);
@@ -107,11 +113,10 @@ public class EventServiceImpl implements EventService {
         Optional.ofNullable(eventDto.getTitle()).ifPresent(event::setTitle);
         Optional.ofNullable(eventDto.getAnnotation()).ifPresent(event::setAnnotation);
         Optional.ofNullable(eventDto.getDescription()).ifPresent(event::setDescription);
-        Optional.ofNullable(eventDto.getParticipantLimit()).ifPresent(event::setParticipantLimit);
         Optional.ofNullable(eventDto.getPaid()).ifPresent(event::setPaid);
         Optional.ofNullable(eventDto.getLocation()).ifPresent(loc -> {
-            event.setLocationLat(loc.getLat());
-            event.setLocationLon(loc.getLon());
+            Location location = locationService.getOrCreateLocation(eventDto.getLocation());
+            event.setLocation(location);
         });
         Optional.ofNullable(eventDto.getParticipantLimit()).ifPresent(event::setParticipantLimit);
         Optional.ofNullable(eventDto.getRequestModeration()).ifPresent(event::setRequestModeration);
@@ -128,8 +133,7 @@ public class EventServiceImpl implements EventService {
             }
         }
 
-        Event saved = eventRepository.save(event);
-        return EventMapper.toEventDto(saved);
+        return EventMapper.toEventDto(event);
     }
 
     @Override
@@ -163,7 +167,9 @@ public class EventServiceImpl implements EventService {
                         optionalSpec(EventSpecifications.withCategoriesIn(filter.getCategories())),
                         optionalSpec(EventSpecifications.withStatesIn(filter.getStates())),
                         optionalSpec(EventSpecifications.withRangeStart(filter.getRangeStart())),
-                        optionalSpec(EventSpecifications.withRangeEnd(filter.getRangeEnd()))
+                        optionalSpec(EventSpecifications.withRangeEnd(filter.getRangeEnd())),
+                        optionalSpec(EventSpecifications.withLocationId(filter.getLocationId())),
+                        optionalSpec(EventSpecifications.withCoordinates(filter.getZone()))
                 )
                 .filter(Objects::nonNull)
                 .reduce(Specification::and)
@@ -176,6 +182,8 @@ public class EventServiceImpl implements EventService {
                         optionalSpec(EventSpecifications.withCategoriesIn(filter.getCategories())),
                         optionalSpec(EventSpecifications.withPaid(filter.getPaid())),
                         optionalSpec(EventSpecifications.withState(filter.getState())),
+                        optionalSpec(EventSpecifications.withLocationId(filter.getLocationId())),
+                        optionalSpec(EventSpecifications.withCoordinates(filter.getZone())),
                         optionalSpec(EventSpecifications.withOnlyAvailable(filter.getOnlyAvailable())),
                         optionalSpec(EventSpecifications.withRangeStart(filter.getRangeStart())),
                         optionalSpec(EventSpecifications.withRangeEnd(filter.getRangeEnd()))
@@ -287,13 +295,7 @@ public class EventServiceImpl implements EventService {
     }
 
     private Map<Long, Integer> getViewsCount(List<Long> eventIds) {
-        Map<Long, Integer> statistics = getStatistics(eventIds);
-
-        if (statistics == null) {
-            return new HashMap<>();
-        }
-
-        return statistics;
+        return getStatistics(eventIds);
     }
 
     @SuppressWarnings("UnusedReturnValue")

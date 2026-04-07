@@ -44,7 +44,7 @@ public class ErrorHandler {
     }
 
     @ResponseStatus(HttpStatus.CONFLICT)
-    @ExceptionHandler({ConditionNotMetException.class, IllegalStateException.class})
+    @ExceptionHandler({ConditionNotMetException.class, IllegalStateException.class, DuplicateLocationsException.class})
     public ErrorResponse handleConflictExceptions(RuntimeException ex) {
         return buildErrorResponse(ex.getMessage(), "Условие не выполнено", HttpStatus.CONFLICT);
     }

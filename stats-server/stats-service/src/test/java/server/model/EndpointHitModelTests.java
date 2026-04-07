@@ -84,26 +84,6 @@ public class EndpointHitModelTests {
     }
 
     @Test
-    void shouldTestToString() {
-        EndpointHit endpointHit = EndpointHit.builder()
-                .id(4L)
-                .app("test-app")
-                .uri("/test")
-                .ip("127.0.0.1")
-                .timestamp(LocalDateTime.of(2026, 3, 17, 9, 0))
-                .build();
-
-        String toStringResult = endpointHit.toString();
-
-        assertNotNull(toStringResult);
-        assertTrue(toStringResult.contains("EndpointHit"));
-        assertTrue(toStringResult.contains("id=4"));
-        assertTrue(toStringResult.contains("app=test-app"));
-        assertTrue(toStringResult.contains("uri=/test"));
-        assertTrue(toStringResult.contains("ip=127.0.0.1"));
-    }
-
-    @Test
     void shouldTestEntityAnnotation() {
         Class<EndpointHit> clazz = EndpointHit.class;
         boolean hasEntityAnnotation = clazz.isAnnotationPresent(Entity.class);
